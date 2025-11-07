@@ -15,7 +15,7 @@ def resources():
                 base_url=dg.EnvVar("COMPRASGOV_API_BASE_URL")
             ),
             "sqlalchemy": SqlAlchemyResource(
-                connection_string=dg.EnvVar("MARIA_DB_CONNECTION_STRING")                
+                connection_string=dg.EnvVar("MARIADB_CONNECTION_STRING")                
             ),
             "catalog_groups": CatalogGroupsResource(),
             "comprasgov_table": ComprasgovTableResource(),

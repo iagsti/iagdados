@@ -19,17 +19,18 @@ def raw_item_dataframe(
     for group in groups:
             page = 1
             has_more_pages = True
-            while has_more_pages:
+            while has_more_pages and not context.run.is_failure_or_canceled:
                 try:
                     items = comprasgov_api.get_items(page=page, page_width=500, group_code=group)
                     items_list += (items.json()["resultado"])
                     has_more_pages = (items.json()["paginasRestantes"] > 0)
-                    sleep(1)
                     log_text = f"Appending page {page}, group {group}"
                     context.log.info(log_text)
-                    page = page + 1
                 except:
+                    context.log.info(items.url)
                     context.log.error(f"Can't get page {page}, group {group}")
+                sleep(1)
+                page = page + 1
     df = pd.DataFrame(items_list)
     return df
 
@@ -62,7 +63,6 @@ def items_keys_mapping(
         "descricaoItem": "descricao_item",
         "statusItem": "status_item",
         "itemSustentavel": "item_sustentavel",
-        "codigoNcm": "codigo_ncm",
         "descricaoNcm": "descricao_ncm",
         "dataHoraAtualizacao": "data_hora_atualizacao"
     }
@@ -81,7 +81,7 @@ def silver_items_parquet(
     return file_path
 
 
-@dg.asset(kinds={"sqlalchemy", "mariadb", "pandas"})
+@dg.asset(kinds={"sqlalchemy", "pandas"})
 def items_data_loading(
     sqlalchemy: resources.SqlAlchemyResource,
     items_keys_mapping: pd.DataFrame,

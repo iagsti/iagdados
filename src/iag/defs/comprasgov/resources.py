@@ -1,4 +1,5 @@
 import dagster as dg
+import requests
 from sqlalchemy import create_engine, Column, Integer, String, Boolean
 from sqlalchemy.orm import declarative_base
 from requests_tor import RequestsTor
@@ -46,10 +47,13 @@ class ComprasGovAPIResource(dg.ConfigurableResource):
             "statusitem": self.stauts_item
         }
 
-        tor = RequestsTor(tor_ports=(9050,), tor_cport=9051)
-
-        response = tor.get(self.base_url, params=parameters, headers=headers)
-        return response
+        try:
+            response = requests.get(self.base_url, params=parameters, headers=headers)
+            return response
+        except:
+            tor = RequestsTor(tor_ports=(9050,), tor_cport=9051)
+            response = tor.get(self.base_url, params=parameters, headers=headers)
+            return response
 
 
 class SqlAlchemyResource(dg.ConfigurableResource):
@@ -75,10 +79,11 @@ class ComprasgovTableResource(dg.ConfigurableResource):
             descricao_item = Column(String(2048))
             status_item = Column(Boolean)
             item_sustentavel = Column(Boolean)
-            codigo_ncm = Column(Integer)
+            codigo_ncm = Column(String(128))
             descricriao_ncm = Column(String(2048))
             data_hora_atualizacao = Column(String(255))
 
+        Base.metadata.drop_all(engine)
         Base.metadata.create_all(engine)
 
         return ComprasGovItens

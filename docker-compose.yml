@@ -1,0 +1,138 @@
+services:
+  dagster_code_server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dagster_code_server
+    command: >
+      dagster code-server start 
+      -h 0.0.0.0 
+      -p 4000 
+      -m iag.definitions
+    environment:
+      # Dagster configs
+      DAGSTER_HOME: /opt/dagster/dagster_home
+      DAGSTER_POSTGRES_HOST: postgres
+      DAGSTER_POSTGRES_USER: ${POSTGRES_USER}
+      DAGSTER_POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      DAGSTER_POSTGRES_DB: ${POSTGRES_DB}
+      DAGSTER_POSTGRES_PORT: 5432
+      PYTHONPATH: /opt/dagster/app/src
+
+      # PROJECT VARIABLES
+      MARIADB_CONNECTION_STRING: ${MARIADB_CONNECTION_STRING}
+      COMPRASGOV_API_BASE_URL: ${COMPRASGOV_API_BASE_URL}
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    volumes:
+      - ./src/:/opt/dagster/app/src:ro
+      - ./dagster_home:/opt/dagster/dagster_home
+      - dagster_code_cache:/home/dagster/.cache
+    networks:
+      - dagster_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "dagster", "api", "grpc-health-check", "--host", "localhost", "--port", "4000"]
+      interval: 7s
+      timeout: 5s
+      retries: 3
+
+  dagster_daemon:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dagster_daemon
+    command: dagster-daemon run
+    environment:
+      DAGSTER_HOME: /opt/dagster/dagster_home
+      DAGSTER_POSTGRES_HOST: postgres
+      DAGSTER_POSTGRES_USER: ${POSTGRES_USER}
+      DAGSTER_POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      DAGSTER_POSTGRES_DB: ${POSTGRES_DB}
+      DAGSTER_POSTGRES_PORT: 5432
+      PYTHONPATH: /opt/dagster/app/src
+
+      # PROJECT VARIABLES
+      MARIADB_CONNECTION_STRING: ${MARIADB_CONNECTION_STRING}
+      COMPRASGOV_API_BASE_URL: ${COMPRASGOV_API_BASE_URL}
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    volumes:
+      - ./src:/opt/dagster/app/src:ro
+      - ./dagster_home:/opt/dagster/dagster_home
+      - dagster_daemon_cache:/home/dagster/.cache
+    networks:
+      - dagster_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      dagster_code_server:
+        condition: service_healthy
+    restart: unless-stopped
+
+  dagster_webserver:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dagster_webserver
+    command: >
+      dagster-webserver -h 0.0.0.0 -p 3000
+    environment:
+      DAGSTER_HOME: /opt/dagster/dagster_home
+      DAGSTER_POSTGRES_HOST: postgres
+      DAGSTER_POSTGRES_USER: ${POSTGRES_USER}
+      DAGSTER_POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      DAGSTER_POSTGRES_DB: ${POSTGRES_DB}
+      DAGSTER_POSTGRES_PORT: 5432
+      PYTHONPATH: /opt/dagster/app/src
+
+      # Code variables
+      MARIADB_CONNECTION_STRING: ${MARIADB_CONNECTION_STRING}
+      COMPRASGOV_API_BASE_URL: ${COMPRASGOV_API_BASE_URL}
+
+    ports:
+      - "${DAGSTER_PORT:-3000}:3000"
+    volumes:
+      - ./src:/opt/dagster/app/src:ro
+      - ./dagster_home:/opt/dagster/dagster_home
+      - dagster_webserver_cache:/home/dagster/.cache
+    networks:
+      - dagster_network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      dagster_code_server:
+        condition: service_healthy
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: dagster_postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-dagster}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-dagster}
+      POSTGRES_DB: ${POSTGRES_DB:-dagster}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - dagster_network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U dagster" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  dagster_code_cache:
+  dagster_daemon_cache:
+  dagster_webserver_cache:
+
+
+networks:
+  dagster_network:
+    driver: bridge
