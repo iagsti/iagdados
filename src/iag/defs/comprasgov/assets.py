@@ -44,10 +44,10 @@ def raw_items_parquet(
     data_path: resources.DataPathResource,
     raw_item_dataframe: pd.DataFrame
 ):
-    context.log.info(f"Gravando dados em {file_path}")
     filename = "raw_items"
     path = data_path.get_data_path()
     file_path = f"{path}/raw/{filename}.parquet"
+    context.log.info(f"Gravando dados em {file_path}")
     raw_item_dataframe.to_parquet(file_path)
     return file_path
 
