@@ -1,6 +1,8 @@
 import dagster as dg
 import requests
-from sqlalchemy import create_engine, Column, Integer, String, Boolean
+import pandas as pd
+from time import sleep
+from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, Float, func
 from sqlalchemy.orm import declarative_base
 from requests_tor import RequestsTor
 
@@ -17,23 +19,23 @@ class CatalogGroupsResource(dg.ConfigurableResource):
         selected_groups = [
             35,
             40,
-            41,
-            47,
-            49,
-            51,
-            52,
-            53,
-            56,
-            58,
-            60,
-            61,
-            63,
-            70,
-            71,
-            74,
-            75,
-            80,
-            85
+            # 41,
+            # 47,
+            # 49,
+            # 51,
+            # 52,
+            # 53,
+            # 56,
+            # 58,
+            # 60,
+            # 61,
+            # 63,
+            # 70,
+            # 71,
+            # 74,
+            # 75,
+            # 80,
+            # 85
         ]
         return selected_groups
 
@@ -41,27 +43,69 @@ class CatalogGroupsResource(dg.ConfigurableResource):
 class ComprasGovAPIResource(dg.ConfigurableResource):
     base_url: str
     stauts_item: str = "true"
+    headers: dict = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
+        "Content-Type": "application/json",
+    }
 
-    def get_items(self, page: int, page_width: int, group_code: int):
-        headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
-            "Content-Type": "application/json",
-        }
-        parameters = {
-            "pagina": page,
-            "tamanhoPagina": page_width,
-            "codigoGrupo": group_code,
-            "statusitem": self.stauts_item
-        }
-
+    def __make_request(self, url: str, params: dict):
         try:
-            response = requests.get(self.base_url, params=parameters, headers=headers)
+            response = requests.get(url, params=params, headers=self.headers)
             return response
         except:
             tor = RequestsTor(tor_ports=(9050,), tor_cport=9051)
-            response = tor.get(self.base_url, params=parameters, headers=headers)
+            response = tor.get(url, params=params, headers=self.headers)
             return response
 
+    def extract_data(
+            self,
+            context: dg.AssetExecutionContext,
+            reference_list: list,
+            resource_name: str,
+            page_width: int
+    ):
+        data_list = []
+
+        for code in reference_list:
+            page = 1
+            has_more_pages = True
+            while has_more_pages and not context.run.is_failure_or_canceled:
+                try:
+                    response = getattr(self, resource_name)(page=page, page_width=page_width, code=code)
+                    data_list += (response.json()["resultado"])
+                    has_more_pages = (response.json()["paginasRestantes"] > 0)
+                    log_text = f"Appending page {page}, item {code}"
+                    context.log.info(log_text)
+                except:
+                    context.log.error(response.url)
+                    context.log.error(f"Can't get page {page}, item {code}")
+                sleep(1)
+                page = page + 1
+        df = pd.DataFrame(data_list)
+        return df
+        
+
+    def get_items(self, page: int, page_width: int, code: int):
+        parameters = {
+            "pagina": page,
+            "tamanhoPagina": page_width,
+            "codigoGrupo": code,
+            "statusitem": self.stauts_item
+        }
+        items_url = f"{self.base_url}/modulo-material/4_consultarItemMaterial"
+        response = self.__make_request(url=items_url, params=parameters)
+        return response
+
+    def get_preco(self, page: int, page_width: int, code: int):
+        parameters = {
+            "pagina": page,
+            "tamanhoPagina": page_width,
+            "codigoItemCatalogo": code,
+        }
+        preco_url = f"{self.base_url}/modulo-pesquisa-preco/1_consultarMaterial"
+        response = self.__make_request(url=preco_url, params=parameters)
+        return response
+            
 
 class SqlAlchemyResource(dg.ConfigurableResource):
     connection_string: str
@@ -96,4 +140,25 @@ class ComprasgovTableResource(dg.ConfigurableResource):
         return ComprasGovItens
 
 
+class PCATableResource(dg.ConfigurableResource):
+    def create_pca_itens_table(self, engine):
+        Base = declarative_base()
+        class PCAItens(Base):
+            __tablename__ = 'core_item'
+            id = Column(Integer, primary_key=True, autoincrement=True)
+            data_criacao = Column(DateTime, default=func.now(), nullable=False)
+            data_modificacao = Column(DateTime, default=func.now(), onupdate=func.now(), nullable=False)
+            codigo_grupo = Column(Integer, nullable=False)
+            nome_grupo = Column(String(256), nullable=False)
+            codigo_classe = Column(Integer, nullable=False)
+            nome_classe = Column(String(256), nullable=False)
+            codigo_pdm = Column(Integer, nullable=False)
+            nome_pdm = Column(String(256), nullable=False)
+            codigo_item = Column(Integer, nullable=False)
+            descricao_item = Column(String(2048), nullable=False)
+            valor_estimado = Column(Float, nullable=True)
 
+        Base.metadata.drop_all(engine)
+        Base.metadata.create_all(engine)
+
+        return PCAItens

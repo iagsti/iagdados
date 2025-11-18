@@ -16,25 +16,29 @@ def raw_item_dataframe(
     Extrai os dados de  items
     """
     groups = catalog_groups.get_selected_groups()
-    
-    items_list = []
+    df = comprasgov_api.extract_data(
+        context=context,
+        reference_list=groups,
+        resource_name="get_items",
+        page_width=500
+    )
+    return df
 
-    for group in groups:
-            page = 1
-            has_more_pages = True
-            while has_more_pages and not context.run.is_failure_or_canceled:
-                try:
-                    items = comprasgov_api.get_items(page=page, page_width=500, group_code=group)
-                    items_list += (items.json()["resultado"])
-                    has_more_pages = (items.json()["paginasRestantes"] > 0)
-                    log_text = f"Appending page {page}, group {group}"
-                    context.log.info(log_text)
-                except:
-                    context.log.info(items.url)
-                    context.log.error(f"Can't get page {page}, group {group}")
-                sleep(1)
-                page = page + 1
-    df = pd.DataFrame(items_list)
+
+@dg.asset(kinds={"python", "pandas"})
+def raw_price_dataframe(
+    context: dg.AssetExecutionContext,
+    comprasgov_api: resources.ComprasGovAPIResource,
+    raw_item_dataframe: pd.DataFrame
+):
+    codigo_item_list = raw_item_dataframe["codigoItem"].to_list()
+    price_list = comprasgov_api.extract_data(
+        context=context,
+        reference_list=codigo_item_list,
+        resource_name="get_preco",
+        page_width=500
+    )
+    df = pd.DataFrame(price_list)
     return df
 
 
@@ -102,4 +106,30 @@ def items_data_loading(
 
     with Session(engine) as session:
         session.bulk_insert_mappings(ComprasGovTable, data)
+        session.commit()
+
+
+@dg.asset(kinds={"sqlalchemy"})
+def items_pca_data_options(
+    engine_pca: resources.SqlAlchemyResource,
+    items_keys_mapping: pd.DataFrame,
+    pca_table: resources.PCATableResource
+):
+    engine = engine_pca.get_engine()
+    selected_columns = [
+        "codigo_grupo",
+        "nome_grupo",
+        "codigo_classe",
+        "nome_classe",
+        "codigo_pdm",
+        "nome_pdm",
+        "codigo_item",
+        "descricao_item",
+    ]
+    columns = items_keys_mapping[selected_columns]
+    data = columns.to_dict(orient="records")
+    CoreItemTable = pca_table.create_pca_itens_table(engine=engine)
+
+    with Session(engine) as session:
+        session.bulk_insert_mappings(CoreItemTable, data)
         session.commit()

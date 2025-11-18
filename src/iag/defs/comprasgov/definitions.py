@@ -4,6 +4,7 @@ from .resources import (
     SqlAlchemyResource,
     CatalogGroupsResource,
     ComprasgovTableResource,
+    PCATableResource,
     DataPathResource,
 )
 
@@ -14,8 +15,10 @@ def resources():
         resources={
             "comprasgov_api": ComprasGovAPIResource(base_url=dg.EnvVar("COMPRASGOV_API_BASE_URL")),
             "sqlalchemy": SqlAlchemyResource(connection_string=dg.EnvVar("MARIADB_CONNECTION_STRING")),
+            "engine_pca": SqlAlchemyResource(connection_string=dg.EnvVar("PCA_CONNECTION_STRING")),
             "catalog_groups": CatalogGroupsResource(),
             "comprasgov_table": ComprasgovTableResource(),
-            "data_path": DataPathResource(data_path=dg.EnvVar("DATA_PATH"))
+            "pca_table": PCATableResource(), 
+            "data_path": DataPathResource(data_path="/opt/dagster/data")
         }
     )
