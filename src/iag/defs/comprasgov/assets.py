@@ -133,3 +133,26 @@ def items_pca_data_options(
     with Session(engine) as session:
         session.bulk_insert_mappings(CoreItemTable, data)
         session.commit()
+    
+
+@dg.asset(kinds={"mongodb", "pandas"})
+def items_to_mongo(
+    items_keys_mapping: pd.DataFrame,
+    mongo_client: resources.MongoResource
+):
+    client = mongo_client.get_client()
+    db = client["pca"]
+    collection = db["core_items"]
+    selected_columns = [
+        "codigo_grupo",
+        "nome_grupo",
+        "codigo_classe",
+        "nome_classe",
+        "codigo_pdm",
+        "nome_pdm",
+        "codigo_item",
+        "descricao_item",
+    ]
+    columns = items_keys_mapping[selected_columns]
+    data = columns.to_dict(orient="records")
+    collection.insert_many(data)

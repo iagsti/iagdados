@@ -13,5 +13,6 @@ comprasgov_job = dg.define_asset_job(
         assets.silver_items_parquet,
         assets.items_data_loading,
         assets.items_pca_data_options,
+        assets.items_to_mongo,
     ]
 )

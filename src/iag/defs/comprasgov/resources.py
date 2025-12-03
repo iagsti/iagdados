@@ -1,6 +1,7 @@
 import dagster as dg
 import requests
 import pandas as pd
+from pymongo import MongoClient
 from time import sleep
 from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, Float, func
 from sqlalchemy.orm import declarative_base
@@ -19,23 +20,23 @@ class CatalogGroupsResource(dg.ConfigurableResource):
         selected_groups = [
             35,
             40,
-            # 41,
-            # 47,
-            # 49,
-            # 51,
-            # 52,
-            # 53,
-            # 56,
-            # 58,
-            # 60,
-            # 61,
-            # 63,
-            # 70,
-            # 71,
-            # 74,
-            # 75,
-            # 80,
-            # 85
+            41,
+            47,
+            49,
+            51,
+            52,
+            53,
+            56,
+            58,
+            60,
+            61,
+            63,
+            70,
+            71,
+            74,
+            75,
+            80,
+            85
         ]
         return selected_groups
 
@@ -158,7 +159,14 @@ class PCATableResource(dg.ConfigurableResource):
             descricao_item = Column(String(2048), nullable=False)
             valor_estimado = Column(Float, nullable=True)
 
-        Base.metadata.drop_all(engine)
         Base.metadata.create_all(engine)
 
         return PCAItens
+
+
+class MongoResource(dg.ConfigurableResource):
+    mongo_uri: str
+
+    def get_client(self):
+        client = MongoClient(self.mongo_uri)
+        return client
