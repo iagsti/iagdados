@@ -20,6 +20,7 @@ COPY uv.lock* ./
 
 # Instalar dependências Python
 RUN uv pip install --system --no-cache .
+RUN uv sync
 
 # NÃO copiar src/ - será mapeado via volume
 

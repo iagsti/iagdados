@@ -42,6 +42,20 @@ def raw_price_dataframe(
     return df
 
 
+@dg.asset(kinds={"pandas"})
+def raw_price_parquet(
+    context: dg.AssetExecutionContext,
+    data_path: resources.DataPathResource,
+    raw_price_dataframe: pd.DataFrame
+):
+    filename = "raw_price"
+    path = data_path.get_data_path()
+    file_path = f"{path}/raw/{filename}.parquet"
+    context.log.info(f"Gravando dados em {file_path}")
+    raw_price_dataframe.to_parquet(file_path)
+    return file_path
+
+
 @dg.asset(kinds={"parquet"})
 def raw_items_parquet(
     context: dg.AssetExecutionContext,
@@ -81,27 +95,55 @@ def items_keys_mapping(
     return renamed_df
 
 
+@dg.asset(kinds={"pandas"})
+def items_without_duplicates(items_keys_mapping: pd.DataFrame):
+    items_no_duplicates = items_keys_mapping.drop_duplicates(
+        subset=["codigo_item"],
+        keep="first"
+    ).reset_index(drop=True)
+    return items_no_duplicates
+
+
+@dg.asset(kinds={"sqlalchemy", "pandas"})
+def existing_items(engine_pca: resources.SqlAlchemyResource):
+    engine = engine_pca.get_engine()
+    query = "SELECT codigo_item FROM core_item"
+    existing_data_df = pd.read_sql(query, engine)
+    return existing_data_df
+
+
+@dg.asset(kinds={"pandas"})
+def no_existing_items(
+    existing_items: pd.DataFrame,
+    items_without_duplicates: pd.DataFrame
+):
+    no_existing_df = items_without_duplicates[
+        ~items_without_duplicates["codigo_item"].isin(existing_items["codigo_item"])
+    ]
+    return no_existing_df
+
+
 @dg.asset(kinds={"parquet"})
 def silver_items_parquet(
     context: dg.AssetExecutionContext,
     data_path: resources.DataPathResource,
-    items_keys_mapping: pd.DataFrame
+    items_without_duplicates: pd.DataFrame
 ):
     filename = "silver_items"
     path = data_path.get_data_path()
     file_path = f"{path}/silver/{filename}.parquet"
-    items_keys_mapping.to_parquet(file_path)
+    items_without_duplicates.to_parquet(file_path)
     return file_path
 
 
 @dg.asset(kinds={"sqlalchemy", "pandas"})
 def items_data_loading(
     sqlalchemy: resources.SqlAlchemyResource,
-    items_keys_mapping: pd.DataFrame,
+    items_without_duplicates: pd.DataFrame,
     comprasgov_table: resources.ComprasgovTableResource
 ):
     engine = sqlalchemy.get_engine()
-    data = items_keys_mapping.to_dict(orient="records")
+    data = items_without_duplicates.to_dict(orient="records")
     ComprasGovTable = comprasgov_table.create_comprasgov_itens_table(engine=engine)
 
     with Session(engine) as session:
@@ -112,7 +154,7 @@ def items_data_loading(
 @dg.asset(kinds={"sqlalchemy"})
 def items_pca_data_options(
     engine_pca: resources.SqlAlchemyResource,
-    items_keys_mapping: pd.DataFrame,
+    no_existing_items: pd.DataFrame,
     pca_table: resources.PCATableResource
 ):
     engine = engine_pca.get_engine()
@@ -126,18 +168,18 @@ def items_pca_data_options(
         "codigo_item",
         "descricao_item",
     ]
-    columns = items_keys_mapping[selected_columns]
+    columns = no_existing_items[selected_columns]
     data = columns.to_dict(orient="records")
     CoreItemTable = pca_table.create_pca_itens_table(engine=engine)
 
     with Session(engine) as session:
         session.bulk_insert_mappings(CoreItemTable, data)
         session.commit()
-    
+
 
 @dg.asset(kinds={"mongodb", "pandas"})
 def items_to_mongo(
-    items_keys_mapping: pd.DataFrame,
+    no_existing_items: pd.DataFrame,
     mongo_client: resources.MongoResource
 ):
     client = mongo_client.get_client()
@@ -153,6 +195,6 @@ def items_to_mongo(
         "codigo_item",
         "descricao_item",
     ]
-    columns = items_keys_mapping[selected_columns]
+    columns = no_existing_items[selected_columns]
     data = columns.to_dict(orient="records")
     collection.insert_many(data)

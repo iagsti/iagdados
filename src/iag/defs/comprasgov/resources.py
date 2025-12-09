@@ -121,7 +121,8 @@ class ComprasgovTableResource(dg.ConfigurableResource):
         Base = declarative_base()
         class ComprasGovItens(Base):
             __tablename__ = "comprasgov_itens"
-            codigo_item = Column(Integer, primary_key=True, autoincrement=False)
+            id = Column(Integer, primary_key=True, autoincrement=True)
+            codigo_item = Column(Integer)
             codigo_grupo = Column(Integer)
             nome_grupo = Column(String(255))
             codigo_classe = Column(Integer)
