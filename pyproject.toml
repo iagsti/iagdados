@@ -12,6 +12,7 @@ dependencies = [
     "psycopg>=3.2.13",
     "pyarrow>=21.0.0",
     "pymongo>=4.15.4",
+    "pymssql>=2.3.11",
     "pymysql>=1.1.2",
     "requests-tor>=1.4",
     "sqlalchemy>=2.0.44",
