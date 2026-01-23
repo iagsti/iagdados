@@ -96,8 +96,27 @@ def items_keys_mapping(
 
 
 @dg.asset(kinds={"pandas"})
-def items_without_duplicates(items_keys_mapping: pd.DataFrame):
-    items_no_duplicates = items_keys_mapping.drop_duplicates(
+def spell_checked(
+    items_keys_mapping: pd.DataFrame,
+    spell_checker_resource: resources.SpellCheckerResource,
+    sqlalchemy: resources.SqlAlchemyResource,
+):
+    columns_to_check = [
+        "nome_grupo",
+        "nome_classe",
+        "nome_pdm",
+        "descricao_item",
+        "descricao_ncm",
+    ]
+    df = items_keys_mapping
+    df[columns_to_check] = df[columns_to_check].apply(lambda col: col.map(spell_checker_resource.check_text))
+    df.to_sql(name='spell_checked_items', con=sqlalchemy.get_engine(), if_exists='replace', index=False)
+    return df
+
+
+@dg.asset(kinds={"pandas"})
+def items_without_duplicates(spell_checked: pd.DataFrame):
+    items_no_duplicates = spell_checked.drop_duplicates(
         subset=["codigo_item"],
         keep="first"
     ).reset_index(drop=True)
@@ -175,8 +194,8 @@ def items_pca_data_options(
     with Session(engine) as session:
         session.bulk_insert_mappings(CoreItemTable, data)
         session.commit()
-
-
+        
+        
 @dg.asset(kinds={"mongodb", "pandas"})
 def items_to_mongo(
     no_existing_items: pd.DataFrame,

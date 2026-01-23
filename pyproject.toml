@@ -15,6 +15,7 @@ dependencies = [
     "pymongo>=4.15.4",
     "pymssql>=2.3.11",
     "pymysql>=1.1.2",
+    "pyspellchecker>=0.8.4",
     "requests-tor>=1.4",
     "sqlalchemy>=2.0.44",
 ]

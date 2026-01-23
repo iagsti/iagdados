@@ -1,6 +1,8 @@
 import dagster as dg
+
 import requests
 import pandas as pd
+from spellchecker import SpellChecker
 from pymongo import MongoClient
 from time import sleep
 from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, Float, func
@@ -171,3 +173,27 @@ class MongoResource(dg.ConfigurableResource):
     def get_client(self):
         client = MongoClient(self.mongo_uri)
         return client
+
+
+class SpellCheckerResource(dg.ConfigurableResource):
+    def check_text(self, text: str):
+        if not isinstance(text, str) or text is None:
+            return text
+        
+        if len(text.strip()) == 0:
+            return text
+        
+        spell = SpellChecker(language="pt")
+        words = text.split()
+        misspeled = spell.unknown(words)
+        
+        new_text = []
+        
+        for word in words:
+            if word in misspeled:
+                corrected = spell.correction(word)
+                new_text.append(corrected if corrected else word)
+            else:
+                new_text.append(word)
+        return " ".join(new_text)
+    

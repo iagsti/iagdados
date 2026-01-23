@@ -7,6 +7,7 @@ from .resources import (
     PCATableResource,
     DataPathResource,
     MongoResource,
+    SpellCheckerResource,
 )
 
 
@@ -21,6 +22,7 @@ def resources():
             "comprasgov_table": ComprasgovTableResource(),
             "pca_table": PCATableResource(), 
             "data_path": DataPathResource(data_path="/opt/dagster/data"),
-            "mongo_client": MongoResource(mongo_uri=dg.EnvVar("MONGO_DATABASE_URI"))
+            "mongo_client": MongoResource(mongo_uri=dg.EnvVar("MONGO_DATABASE_URI")),
+            "spell_checker_resource": SpellCheckerResource()
         }
     )
