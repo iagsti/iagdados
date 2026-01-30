@@ -10,15 +10,16 @@ from sqlalchemy.orm import Session
 def raw_item_dataframe(
     context: dg.AssetExecutionContext,
     comprasgov_api: resources.ComprasGovAPIResource,
-    catalog_groups: resources.CatalogGroupsResource
+    catalog_groups: resources.CatalogGroupsResource,
+    items_rsource: resources.ItemsResource
 ) -> pd.DataFrame:
     """
     Extrai os dados de  items
     """
-    groups = catalog_groups.get_selected_groups()
+    items = items_rsource.get_items_list()
     df = comprasgov_api.extract_data(
         context=context,
-        reference_list=groups,
+        reference_list=items,
         resource_name="get_items",
         page_width=500
     )
@@ -204,6 +205,7 @@ def items_to_mongo(
     client = mongo_client.get_client()
     db = client["pca"]
     collection = db["core_items"]
+    collection.delete_many({})
     selected_columns = [
         "codigo_grupo",
         "nome_grupo",

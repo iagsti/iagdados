@@ -1,5 +1,4 @@
 import dagster as dg
-
 import requests
 import pandas as pd
 from spellchecker import SpellChecker
@@ -41,11 +40,17 @@ class CatalogGroupsResource(dg.ConfigurableResource):
             85
         ]
         return selected_groups
+    
+class ItemsResource(dg.ConfigurableResource):
+    def get_items_list(self):
+        items_list_df = pd.read_csv("src/iag/defs/comprasgov/files/codigos_de_itens.csv")
+        items_list = items_list_df["item_code"].astype(int).to_list()
+        return items_list
 
 
 class ComprasGovAPIResource(dg.ConfigurableResource):
     base_url: str
-    stauts_item: str = "true"
+    bps: str = "false"
     headers: dict = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
         "Content-Type": "application/json",
@@ -55,7 +60,7 @@ class ComprasGovAPIResource(dg.ConfigurableResource):
         try:
             response = requests.get(url, params=params, headers=self.headers)
             return response
-        except:
+        except Exception:
             tor = RequestsTor(tor_ports=(9050,), tor_cport=9051)
             response = tor.get(url, params=params, headers=self.headers)
             return response
@@ -79,9 +84,9 @@ class ComprasGovAPIResource(dg.ConfigurableResource):
                     has_more_pages = (response.json()["paginasRestantes"] > 0)
                     log_text = f"Appending page {page}, item {code}"
                     context.log.info(log_text)
-                except:
+                except Exception as e:
                     context.log.error(response.url)
-                    context.log.error(f"Can't get page {page}, item {code}")
+                    context.log.error(f"Can't get page {page}, item {code}: {e}")
                 sleep(1)
                 page = page + 1
         df = pd.DataFrame(data_list)
@@ -92,8 +97,8 @@ class ComprasGovAPIResource(dg.ConfigurableResource):
         parameters = {
             "pagina": page,
             "tamanhoPagina": page_width,
-            "codigoGrupo": code,
-            "statusitem": self.stauts_item
+            "codigoItem": code,
+            "bps": self.bps
         }
         items_url = f"{self.base_url}/modulo-material/4_consultarItemMaterial"
         response = self.__make_request(url=items_url, params=parameters)
