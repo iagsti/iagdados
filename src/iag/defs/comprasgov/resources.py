@@ -43,7 +43,7 @@ class CatalogGroupsResource(dg.ConfigurableResource):
     
 class ItemsResource(dg.ConfigurableResource):
     def get_items_list(self):
-        items_list_df = pd.read_csv("src/iag/defs/comprasgov/files/codigos_de_itens.csv")
+        items_list_df = pd.read_csv("src/iag/defs/comprasgov/files/pca_itens_codigos.csv")
         items_list = items_list_df["item_code"].astype(int).to_list()
         return items_list
 
