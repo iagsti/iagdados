@@ -85,6 +85,7 @@ class ComprasGovAPIResource(dg.ConfigurableResource):
                     log_text = f"Appending page {page}, item {code}"
                     context.log.info(log_text)
                 except Exception as e:
+                    has_more_pages = False
                     context.log.error(response.url)
                     context.log.error(f"Can't get page {page}, item {code}: {e}")
                 sleep(1)

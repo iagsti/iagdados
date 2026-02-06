@@ -1,4 +1,5 @@
 import dagster as dg
+from src.iag.io_managers.pandas_parquet_io_mager import pandas_parquet_io_manager
 from .resources import (
     ComprasGovAPIResource,
     SqlAlchemyResource,
@@ -25,6 +26,7 @@ def resources():
             "pca_table": PCATableResource(), 
             "data_path": DataPathResource(data_path="/opt/dagster/data"),
             "mongo_client": MongoResource(mongo_uri=dg.EnvVar("MONGO_DATABASE_URI")),
-            "spell_checker_resource": SpellCheckerResource()
+            "spell_checker_resource": SpellCheckerResource(),
+            "pandas_parquet_io_manager": pandas_parquet_io_manager,
         }
     )

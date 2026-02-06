@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 def raw_item_dataframe(
     context: dg.AssetExecutionContext,
     comprasgov_api: resources.ComprasGovAPIResource,
-    catalog_groups: resources.CatalogGroupsResource,
+    sqlalchemy: resources.SqlAlchemyResource,
     items_rsource: resources.ItemsResource
 ) -> pd.DataFrame:
     """
@@ -23,6 +23,8 @@ def raw_item_dataframe(
         resource_name="get_items",
         page_width=500
     )
+    con = sqlalchemy.get_engine()
+    df.to_sql(name='raw_items', con=con, if_exists='replace', index=False)
     return df
 
 
