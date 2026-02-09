@@ -56,7 +56,7 @@ def raw_price_parquet(
     file_path = f"{path}/raw/{filename}.parquet"
     context.log.info(f"Gravando dados em {file_path}")
     raw_price_dataframe.to_parquet(file_path)
-    return file_path
+    return raw_item_dataframe
 
 
 @dg.asset(kinds={"parquet"})
@@ -64,13 +64,13 @@ def raw_items_parquet(
     context: dg.AssetExecutionContext,
     data_path: resources.DataPathResource,
     raw_item_dataframe: pd.DataFrame
-):
+) -> pd.DataFrame:
     filename = "raw_items"
     path = data_path.get_data_path()
     file_path = f"{path}/raw/{filename}.parquet"
     context.log.info(f"Gravando dados em {file_path}")
     raw_item_dataframe.to_parquet(file_path)
-    return file_path
+    return raw_item_dataframe
 
 
 @dg.asset(kinds={"pandas"})
@@ -79,7 +79,7 @@ def items_keys_mapping(
     raw_items_parquet
 ):
     context.log.info("Mapeando dados")
-    items_df = pd.read_parquet(raw_items_parquet)
+    items_df = raw_items_parquet.copy()
     keys_mapping = {
         "codigoItem": "codigo_item",
         "codigoGrupo": "codigo_grupo",
@@ -103,7 +103,7 @@ def spell_checked(
     items_keys_mapping: pd.DataFrame,
     spell_checker_resource: resources.SpellCheckerResource,
     sqlalchemy: resources.SqlAlchemyResource,
-):
+) -> pd.DataFrame:
     columns_to_check = [
         "nome_grupo",
         "nome_classe",
@@ -118,7 +118,7 @@ def spell_checked(
 
 
 @dg.asset(kinds={"pandas"})
-def items_without_duplicates(spell_checked: pd.DataFrame):
+def items_without_duplicates(spell_checked: pd.DataFrame) -> pd.DataFrame:
     items_no_duplicates = spell_checked.drop_duplicates(
         subset=["codigo_item"],
         keep="first"
@@ -127,7 +127,7 @@ def items_without_duplicates(spell_checked: pd.DataFrame):
 
 
 @dg.asset(kinds={"sqlalchemy", "pandas"})
-def existing_items(engine_pca: resources.SqlAlchemyResource):
+def existing_items(engine_pca: resources.SqlAlchemyResource) -> pd.DataFrame:
     engine = engine_pca.get_engine()
     query = "SELECT codigo_item FROM core_item"
     existing_data_df = pd.read_sql(query, engine)
@@ -138,7 +138,7 @@ def existing_items(engine_pca: resources.SqlAlchemyResource):
 def no_existing_items(
     existing_items: pd.DataFrame,
     items_without_duplicates: pd.DataFrame
-):
+) -> pd.DataFrame:
     no_existing_df = items_without_duplicates[
         ~items_without_duplicates["codigo_item"].isin(existing_items["codigo_item"])
     ]
@@ -150,12 +150,12 @@ def silver_items_parquet(
     context: dg.AssetExecutionContext,
     data_path: resources.DataPathResource,
     items_without_duplicates: pd.DataFrame
-):
+) -> pd.DataFrame:
     filename = "silver_items"
     path = data_path.get_data_path()
     file_path = f"{path}/silver/{filename}.parquet"
     items_without_duplicates.to_parquet(file_path)
-    return file_path
+    return items_without_duplicates
 
 
 @dg.asset(kinds={"sqlalchemy", "pandas"})

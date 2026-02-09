@@ -10,7 +10,15 @@ class PandasParquetIOManager(IOManager):
         asset_name = context.asset_key.path[-1]
         return os.path.join(self._base_dir, f"{asset_name}.parquet")
 
-    def handle_output(self, context, obj: pd.DataFrame):
+    def handle_output(self, context, obj):
+        if obj is None:
+            context.log.info(f"Asset '{context.asset_key.path[-1]}' retornou None. Pulando salvamento.")
+            return
+
+        if not isinstance(obj, pd.DataFrame):
+            context.log.warning(f"Asset '{context.asset_key.path[-1]}' não é DataFrame. Pulando salvamento.")
+            return
+
         context.log.info("Iniciando salvamento de DataFrame como Parquet")
         path = self._get_path(context)
         os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -19,6 +27,11 @@ class PandasParquetIOManager(IOManager):
 
     def load_input(self, context):
         path = self._get_path(context.upstream_output)
+
+        if not os.path.exists(path):
+            context.log.error(f"Arquivo não encontrado: {path}")
+            return pd.DataFrame()
+
         context.log.info(f"Carregando dados de: {path}")
         return pd.read_parquet(path)
 

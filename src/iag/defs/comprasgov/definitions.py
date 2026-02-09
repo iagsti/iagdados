@@ -27,6 +27,6 @@ def resources():
             "data_path": DataPathResource(data_path="/opt/dagster/data"),
             "mongo_client": MongoResource(mongo_uri=dg.EnvVar("MONGO_DATABASE_URI")),
             "spell_checker_resource": SpellCheckerResource(),
-            "pandas_parquet_io_manager": pandas_parquet_io_manager,
+            "io_manager": pandas_parquet_io_manager,
         }
     )
