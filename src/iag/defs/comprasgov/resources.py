@@ -45,7 +45,7 @@ class ItemsResource(dg.ConfigurableResource):
     def get_items_list(self):
         items_list_df = pd.read_csv("src/iag/defs/comprasgov/files/pca_itens_codigos.csv")
         items_list = items_list_df["item_code"].astype(int).to_list()
-        return items_list
+        return items_list[:10]
 
 
 class ComprasGovAPIResource(dg.ConfigurableResource):

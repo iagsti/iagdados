@@ -11,7 +11,7 @@ class PandasParquetIOManager(IOManager):
         return os.path.join(self._base_dir, f"{asset_name}.parquet")
 
     def handle_output(self, context, obj):
-        if obj is None:
+        if obj is None or not isinstance(obj, pd.DataFrame):
             context.log.info(f"Asset '{context.asset_key.path[-1]}' retornou None. Pulando salvamento.")
             return
 
@@ -30,7 +30,7 @@ class PandasParquetIOManager(IOManager):
 
         if not os.path.exists(path):
             context.log.error(f"Arquivo não encontrado: {path}")
-            return pd.DataFrame()
+            return None
 
         context.log.info(f"Carregando dados de: {path}")
         return pd.read_parquet(path)

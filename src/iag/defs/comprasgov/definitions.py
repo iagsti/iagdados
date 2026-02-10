@@ -21,7 +21,7 @@ def resources():
             "sqlalchemy": SqlAlchemyResource(connection_string=dg.EnvVar("MARIADB_CONNECTION_STRING")),
             "engine_pca": SqlAlchemyResource(connection_string=dg.EnvVar("PCA_CONNECTION_STRING")),
             "catalog_groups": CatalogGroupsResource(),
-            "items_rsource": ItemsResource(),
+            "items_resource": ItemsResource(),
             "comprasgov_table": ComprasgovTableResource(),
             "pca_table": PCATableResource(), 
             "data_path": DataPathResource(data_path="/opt/dagster/data"),

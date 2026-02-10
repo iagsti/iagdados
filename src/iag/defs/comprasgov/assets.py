@@ -1,9 +1,24 @@
 import pandas as pd
 import dagster as dg
-from time import sleep
-from pathlib import Path
 from . import resources
 from sqlalchemy.orm import Session
+
+
+@dg.asset(kinds={"sqlalchemy", "pandas"})
+def existing_items(engine_pca: resources.SqlAlchemyResource) -> pd.DataFrame:
+    engine = engine_pca.get_engine()
+    query = "SELECT codigo_item FROM core_item"
+    existing_data_df = pd.read_sql(query, engine)
+    return existing_data_df
+
+
+@dg.asset(kinds={"pandas"})
+def items_to_get(existing_items: pd.DataFrame, items_resource: resources.ItemsResource) -> pd.DataFrame:
+    items_list = items_resource.get_items_list() or []
+    existing_items_list = existing_items["codigo_item"].tolist()
+    items_to_get_list = [item for item in items_list if item not in existing_items_list]
+    df = pd.DataFrame({"codigo_item": items_to_get_list})
+    return df
 
 
 @dg.asset(kinds={"pandas"})
@@ -11,20 +26,25 @@ def raw_item_dataframe(
     context: dg.AssetExecutionContext,
     comprasgov_api: resources.ComprasGovAPIResource,
     sqlalchemy: resources.SqlAlchemyResource,
-    items_rsource: resources.ItemsResource
+    items_to_get: pd.DataFrame
 ) -> pd.DataFrame:
     """
     Extrai os dados de  items
     """
-    items = items_rsource.get_items_list()
+    if items_to_get is None or items_to_get.empty:
+        items = []
+    else:
+        items = items_to_get["codigo_item"].astype(int).tolist()
     df = comprasgov_api.extract_data(
         context=context,
         reference_list=items,
         resource_name="get_items",
         page_width=500
     )
-    con = sqlalchemy.get_engine()
-    df.to_sql(name='raw_items', con=con, if_exists='replace', index=False)
+    if len(df) > 0:
+        context.log.info("Nenhum item para extrair. Retornando DataFrame vazio.")
+        con = sqlalchemy.get_engine()
+        df.to_sql(name='raw_items', con=con, if_exists='replace', index=False)
     return df
 
 
@@ -56,30 +76,16 @@ def raw_price_parquet(
     file_path = f"{path}/raw/{filename}.parquet"
     context.log.info(f"Gravando dados em {file_path}")
     raw_price_dataframe.to_parquet(file_path)
-    return raw_item_dataframe
-
-
-@dg.asset(kinds={"parquet"})
-def raw_items_parquet(
-    context: dg.AssetExecutionContext,
-    data_path: resources.DataPathResource,
-    raw_item_dataframe: pd.DataFrame
-) -> pd.DataFrame:
-    filename = "raw_items"
-    path = data_path.get_data_path()
-    file_path = f"{path}/raw/{filename}.parquet"
-    context.log.info(f"Gravando dados em {file_path}")
-    raw_item_dataframe.to_parquet(file_path)
-    return raw_item_dataframe
+    return raw_price_dataframe
 
 
 @dg.asset(kinds={"pandas"})
 def items_keys_mapping(
     context: dg.AssetExecutionContext,
-    raw_items_parquet
+    raw_item_dataframe: pd.DataFrame
 ):
     context.log.info("Mapeando dados")
-    items_df = raw_items_parquet.copy()
+    items_df = raw_item_dataframe.copy()
     keys_mapping = {
         "codigoItem": "codigo_item",
         "codigoGrupo": "codigo_grupo",
@@ -104,17 +110,19 @@ def spell_checked(
     spell_checker_resource: resources.SpellCheckerResource,
     sqlalchemy: resources.SqlAlchemyResource,
 ) -> pd.DataFrame:
-    columns_to_check = [
-        "nome_grupo",
-        "nome_classe",
-        "nome_pdm",
-        "descricao_item",
-        "descricao_ncm",
-    ]
-    df = items_keys_mapping
-    df[columns_to_check] = df[columns_to_check].apply(lambda col: col.map(spell_checker_resource.check_text))
-    df.to_sql(name='spell_checked_items', con=sqlalchemy.get_engine(), if_exists='replace', index=False)
-    return df
+    if not items_keys_mapping.empty:
+        columns_to_check = [
+            "nome_grupo",
+            "nome_classe",
+            "nome_pdm",
+            "descricao_item",
+            "descricao_ncm",
+        ]
+        df = items_keys_mapping
+        df[columns_to_check] = df[columns_to_check].apply(lambda col: col.map(spell_checker_resource.check_text))
+        df.to_sql(name='spell_checked_items', con=sqlalchemy.get_engine(), if_exists='replace', index=False)
+        return df
+    return items_keys_mapping
 
 
 @dg.asset(kinds={"pandas"})
@@ -124,25 +132,6 @@ def items_without_duplicates(spell_checked: pd.DataFrame) -> pd.DataFrame:
         keep="first"
     ).reset_index(drop=True)
     return items_no_duplicates
-
-
-@dg.asset(kinds={"sqlalchemy", "pandas"})
-def existing_items(engine_pca: resources.SqlAlchemyResource) -> pd.DataFrame:
-    engine = engine_pca.get_engine()
-    query = "SELECT codigo_item FROM core_item"
-    existing_data_df = pd.read_sql(query, engine)
-    return existing_data_df
-
-
-@dg.asset(kinds={"pandas"})
-def no_existing_items(
-    existing_items: pd.DataFrame,
-    items_without_duplicates: pd.DataFrame
-) -> pd.DataFrame:
-    no_existing_df = items_without_duplicates[
-        ~items_without_duplicates["codigo_item"].isin(existing_items["codigo_item"])
-    ]
-    return no_existing_df
 
 
 @dg.asset(kinds={"parquet"})
@@ -176,48 +165,50 @@ def items_data_loading(
 @dg.asset(kinds={"sqlalchemy"})
 def items_pca_data_options(
     engine_pca: resources.SqlAlchemyResource,
-    no_existing_items: pd.DataFrame,
+    items_without_duplicates: pd.DataFrame,
     pca_table: resources.PCATableResource
 ):
-    engine = engine_pca.get_engine()
-    selected_columns = [
-        "codigo_grupo",
-        "nome_grupo",
-        "codigo_classe",
-        "nome_classe",
-        "codigo_pdm",
-        "nome_pdm",
-        "codigo_item",
-        "descricao_item",
-    ]
-    columns = no_existing_items[selected_columns]
-    data = columns.to_dict(orient="records")
-    CoreItemTable = pca_table.create_pca_itens_table(engine=engine)
+    if not items_without_duplicates.empty:
+        engine = engine_pca.get_engine()
+        selected_columns = [
+            "codigo_grupo",
+            "nome_grupo",
+            "codigo_classe",
+            "nome_classe",
+            "codigo_pdm",
+            "nome_pdm",
+            "codigo_item",
+            "descricao_item",
+        ]
+        columns = items_without_duplicates[selected_columns]
+        data = columns.to_dict(orient="records")
+        CoreItemTable = pca_table.create_pca_itens_table(engine=engine)
 
-    with Session(engine) as session:
-        session.bulk_insert_mappings(CoreItemTable, data)
-        session.commit()
+        with Session(engine) as session:
+            session.bulk_insert_mappings(CoreItemTable, data)
+            session.commit()
         
         
 @dg.asset(kinds={"mongodb", "pandas"})
 def items_to_mongo(
-    no_existing_items: pd.DataFrame,
+    items_without_duplicates: pd.DataFrame,
     mongo_client: resources.MongoResource
 ):
-    client = mongo_client.get_client()
-    db = client["pca"]
-    collection = db["core_items"]
-    collection.delete_many({})
-    selected_columns = [
-        "codigo_grupo",
-        "nome_grupo",
-        "codigo_classe",
-        "nome_classe",
-        "codigo_pdm",
-        "nome_pdm",
-        "codigo_item",
-        "descricao_item",
-    ]
-    columns = no_existing_items[selected_columns]
-    data = columns.to_dict(orient="records")
-    collection.insert_many(data)
+    if not items_without_duplicates.empty:
+        client = mongo_client.get_client()
+        db = client["pca"]
+        collection = db["core_items"]
+        collection.delete_many({})
+        selected_columns = [
+            "codigo_grupo",
+            "nome_grupo",
+            "codigo_classe",
+            "nome_classe",
+            "codigo_pdm",
+            "nome_pdm",
+            "codigo_item",
+            "descricao_item",
+        ]
+        columns = items_without_duplicates[selected_columns]
+        data = columns.to_dict(orient="records")
+        collection.insert_many(data)
