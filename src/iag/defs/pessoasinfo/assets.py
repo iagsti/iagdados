@@ -64,7 +64,9 @@ def pessoasinfo_with_telefone(
 
     df = pessoasinfo_with_locals.copy()
     df["telefone"] = df["ramal"].apply(build_telefone)
-    context.log.info(f"Processed {df['telefone'].notna().sum()} telefones out of {len(df)}")
+    context.log.info(
+        f"Processed {df['telefone'].notna().sum()} telefones out of {len(df)}"
+    )
     return df
 
 
@@ -153,5 +155,5 @@ def pessoasinfo_persisted_data(
 ):
     df = pessoasinfo_obfuscated.copy()
     con = pessoasinfo_mysql_con.get_engine()
-    df.to_sql(name="pessoasinfo", con=con, if_exists="replace")
+    df.to_sql(name="pessoas_info", con=con, if_exists="replace")
     return df
