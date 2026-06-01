@@ -9,6 +9,7 @@ pessoasinfo_job = dg.define_asset_job(
         assets.pessoasinfo_raw_data,
         assets.pessoasinfo_with_locals,
         assets.pessoasinfo_with_telefone,
+        assets.pessoasinfo_with_ddd,
         assets.pessoasinfo_with_lattes,
         assets.pessoasinfo_with_sites,
         assets.pessoasinfo_sanitized,

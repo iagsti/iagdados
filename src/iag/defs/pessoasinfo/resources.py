@@ -85,3 +85,11 @@ class PessoasResource(dg.ConfigurableResource):
             return " ".join(new_term)
         except Exception:
             return terms
+
+    def get_ddd(self, context: dg.AssetExecutionContext, ramal: str):
+        ddd = "11"
+        prefix = ramal[:2].strip()
+        if prefix == "56":
+            context.log.info(f"Matched prefix 56, setting DDD to ramal {ramal}")
+            ddd = "19"
+        return ddd

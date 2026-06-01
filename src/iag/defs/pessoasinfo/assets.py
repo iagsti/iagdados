@@ -57,7 +57,7 @@ def pessoasinfo_with_telefone(
             return None
         match = _RAMAL_PATTERN.search(str(ramal))
         if not match:
-            return None
+            return ramal
         r = match.group(1)
         prefix = _RAMAL_MAPPER.get(r[:2])
         return f"{prefix}{r}" if prefix else None
@@ -70,14 +70,27 @@ def pessoasinfo_with_telefone(
     return df
 
 
+@dg.asset(kinds={"python", "pandas"})
+def pessoasinfo_with_ddd(
+    context: dg.AssetExecutionContext,
+    pessoasinfo_with_telefone: pd.DataFrame,
+    pessoasinfo_resources: PessoasResource,
+) -> pd.DataFrame:
+    df = pessoasinfo_with_telefone.copy()
+    df["ddd"] = df["ramal"].apply(
+        lambda x: pessoasinfo_resources.get_ddd(context, x) if pd.notna(x) else None
+    )
+    return df
+
+
 @dg.asset(
     kinds={"python", "pandas"},
     ins={"lattes_data": dg.AssetIn(key="lattes_link_dataframe")},
 )
 def pessoasinfo_with_lattes(
-    lattes_data: pd.DataFrame, pessoasinfo_with_telefone: pd.DataFrame
+    lattes_data: pd.DataFrame, pessoasinfo_with_ddd: pd.DataFrame
 ) -> pd.DataFrame:
-    df = pessoasinfo_with_telefone.merge(lattes_data, on="codpes", how="left")
+    df = pessoasinfo_with_ddd.merge(lattes_data, on="codpes", how="left")
     return df
 
 
