@@ -3,15 +3,19 @@ name = "iag"
 requires-python = ">=3.9,<3.14"
 version = "0.1.0"
 dependencies = [
+    "beautifulsoup4>=4.14.2",
     "cryptography>=46.0.3",
     "dagster==1.12.0",
+    "dagster-aws>=0.28.0",
     "dagster-postgres>=0.28.0",
     "dagster-sqlalchemy>=0.3.5",
     "dagster-webserver>=1.12.0",
     "geopy>=2.4.1",
+    "orcid>=1.0.3",
     "pandas>=2.3.3",
     "psycopg>=3.2.13",
     "pyarrow>=21.0.0",
+    "pyiceberg>=0.10.0",
     "pymongo>=4.15.4",
     "pymssql>=2.3.11",
     "pymysql>=1.1.2",
@@ -24,6 +28,7 @@ dependencies = [
 dev = [
     "dagster-webserver",
     "dagster-dg-cli",
+    "black>=25.11.0",
 ]
 
 [build-system]
@@ -32,6 +37,10 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 force-include = { "pyproject.toml" = "pyproject.toml" }
+
+[tool.black]
+line-length = 88
+target-version = ["py313"]
 
 [tool.dg]
 directory_type = "project"

@@ -209,3 +209,5 @@ __marimo__/
 logs
 storage
 data
+
+.tmp_dagster_home*

@@ -17,5 +17,6 @@ pessoasinfo_job = dg.define_asset_job(
         assets.pessoasinfo_com_vinculo,
         assets.pessoasinfo_obfuscated,
         assets.pessoasinfo_persisted_data,
+        assets.pessoasinfo_s3_data,
     ],
 )

@@ -2,7 +2,7 @@ import re
 
 import dagster as dg
 import pandas as pd
-from ..resources import SqlAlchemyResource, ObfuscatorResource
+from ..resources import SqlAlchemyResource, ObfuscatorResource, IcebergResource
 from .resources import LocalsApiResource, PessoasResource
 
 
@@ -169,4 +169,13 @@ def pessoasinfo_persisted_data(
     df = pessoasinfo_obfuscated.copy()
     con = pessoasinfo_mysql_con.get_engine()
     df.to_sql(name="pessoas_info", con=con, if_exists="replace")
+    return df
+
+
+@dg.asset(kinds={"pandas", "minio", "iceberg"})
+def pessoasinfo_s3_data(
+    pessoasinfo_obfuscated: pd.DataFrame, iceberg_resource: IcebergResource
+):
+    df = pessoasinfo_obfuscated.copy()
+    iceberg_resource.save(df, namespace="pessoas", table_name="pessoas_info")
     return df
