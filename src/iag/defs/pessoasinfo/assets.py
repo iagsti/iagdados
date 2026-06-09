@@ -174,8 +174,12 @@ def pessoasinfo_persisted_data(
 
 @dg.asset(kinds={"pandas", "minio", "iceberg"})
 def pessoasinfo_s3_data(
-    pessoasinfo_obfuscated: pd.DataFrame, iceberg_resource: IcebergResource
+    context: dg.AssetExecutionContext,
+    pessoasinfo_obfuscated: pd.DataFrame,
+    iceberg_resource: IcebergResource,
 ):
     df = pessoasinfo_obfuscated.copy()
-    iceberg_resource.save(df, namespace="pessoas", table_name="pessoas_info")
+    iceberg_resource.save(
+        df, namespace="pessoas", table_name="pessoas_info", context=context
+    )
     return df

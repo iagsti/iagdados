@@ -39,20 +39,21 @@ class IcebergResource(dg.ConfigurableResource):
     aws_secret_key: str
     aws_region: str
 
-    def get_catalog(self, warehouse: str) -> RestCatalog:
-        return RestCatalog(
-            "lakekeeper",
-            **{
-                "uri": self.lakekeeper_url,
-                "warehouse": warehouse,
-                "s3.endpoint": self.aws_endpoint,
-                "s3.access-key-id": self.aws_access_key,
-                "s3.secret-access-key": self.aws_secret_key,
-                "s3.path-style-access": "true",
-                "s3.region": self.aws_region,
-                "py-io-impl": "pyiceberg.io.pyarrow.PyArrowFileIO",
-            },
-        )
+    def get_catalog(
+        self, warehouse: str, context: dg.AssetExecutionContext
+    ) -> RestCatalog:
+        props = {
+            "uri": self.lakekeeper_url,
+            "warehouse": warehouse,
+            "s3.endpoint": self.aws_endpoint,
+            "s3.access-key-id": self.aws_access_key,
+            "s3.secret-access-key": self.aws_secret_key,
+            "s3.path-style-access": "true",
+            "s3.region": self.aws_region,
+            "py-io-impl": "pyiceberg.io.pyarrow.PyArrowFileIO",
+        }
+        context.log.info(props)
+        return RestCatalog("lakekeeper", **props)
 
     def ensure_namespace(self, catalog: RestCatalog, namespace: str) -> None:
         try:
@@ -91,6 +92,7 @@ class IcebergResource(dg.ConfigurableResource):
         df: pd.DataFrame,
         namespace: str,
         table_name: str,
+        context: dg.AssetExecutionContext,
         warehouse: str = "lake",
     ) -> None:
         """
@@ -99,6 +101,6 @@ class IcebergResource(dg.ConfigurableResource):
         Uso:
             iceberg.save(df, namespace="analytics", table_name="pessoas_info")
         """
-        catalog = self.get_catalog(warehouse)
+        catalog = self.get_catalog(warehouse, context)
         self.ensure_namespace(catalog, namespace)
         self.upsert_table(catalog, warehouse, namespace, table_name, df)

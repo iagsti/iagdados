@@ -97,10 +97,14 @@ def publications_with_orcid_and_doi(
 
 @dg.asset(kinds={"pandas", "idceberg"})
 def publications_s3_data(
-    iceberg_resource: IcebergResource, publications_with_orcid_and_doi: pd.DataFrame
+    context: dg.AssetExecutionContext,
+    iceberg_resource: IcebergResource,
+    publications_with_orcid_and_doi: pd.DataFrame,
 ):
     df = publications_with_orcid_and_doi.copy()
-    iceberg_resource.save(df, namespace="publications", table_name="raw_publications")
+    iceberg_resource.save(
+        df, namespace="publications", table_name="raw_publications", context=context
+    )
     return df
 
 
