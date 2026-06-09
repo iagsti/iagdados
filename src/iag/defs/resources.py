@@ -50,6 +50,7 @@ class IcebergResource(dg.ConfigurableResource):
                 "s3.secret-access-key": self.aws_secret_key,
                 "s3.path-style-access": "true",
                 "s3.region": self.aws_region,
+                "py-io-impl": "pyiceberg.io.pyarrow.PyArrowFileIO",
             },
         )
 
