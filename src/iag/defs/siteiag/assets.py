@@ -38,5 +38,6 @@ def persisted_corpo_funcional(
 ):
     msg = "Carregando corpo funcional"
     context.log.info(msg=msg)
+    wp_ingestion.deletar_todos(context=context)
     wp_ingestion.ingerir_dataframe(df=corpo_funcional, context=context)
     return corpo_funcional

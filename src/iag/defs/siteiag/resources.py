@@ -46,6 +46,47 @@ class WordPressIngestionResource(dg.ConfigurableResource):
             print(f"💥 Falha de conexão ao enviar {nome_pessoa}: {e}")
             return False
 
+    def deletar_todos(self, context: dg.AssetExecutionContext = None) -> int:
+        """Remove todos os registros existentes no endpoint antes da ingestão."""
+        logger = context.log if context else dg.get_dagster_logger()
+        auth = (self.username, self.password)
+        headers = self._get_headers()
+        deletados = 0
+        page = 1
+
+        while True:
+            response = requests.get(
+                self.api_url,
+                auth=auth,
+                headers=headers,
+                params={"per_page": 100, "page": page},
+                verify=False,
+            )
+            if response.status_code != 200 or not response.json():
+                break
+
+            registros = response.json()
+            for registro in registros:
+                rid = registro.get("id") if isinstance(registro, dict) else registro
+                del_response = requests.delete(
+                    f"{self.api_url}/{rid}",
+                    auth=auth,
+                    headers=headers,
+                    params={"force": True},
+                    verify=False,
+                )
+                if del_response.status_code == 200:
+                    deletados += 1
+                else:
+                    logger.info(f"Erro ao deletar id={rid}: HTTP {del_response.status_code}")
+
+            if len(registros) < 100:
+                break
+            page += 1
+
+        logger.info(f"Remoção concluída: {deletados} registros deletados.")
+        return deletados
+
     def ingerir_dataframe(self, df: pd.DataFrame, context: dg.AssetExecutionContext = None) -> dict:
         """
         Percorre o DataFrame realizando a ingestão em lote (bulk).
