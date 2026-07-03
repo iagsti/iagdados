@@ -42,6 +42,9 @@ services:
       WP_IAG_SITE_URL: ${WP_IAG_SITE_URL}
       WP_IAG_USERNAME: ${WP_IAG_USERNAME}
       WP_IAG_PASSWORD: ${WP_IAG_PASSWORD}
+      ACESSO_API_URL: ${ACESSO_API_URL}
+      ACESSO_API_USER: ${ACESSO_API_USER}
+      ACESSO_API_PASSWORD: ${ACESSO_API_PASSWORD}
     volumes:
       - ${DATA_PATH}:/opt/dagster/data
       - ./src/:/opt/dagster/app/src:ro
@@ -97,6 +100,9 @@ services:
       WP_IAG_SITE_URL: ${WP_IAG_SITE_URL}
       WP_IAG_USERNAME: ${WP_IAG_USERNAME}
       WP_IAG_PASSWORD: ${WP_IAG_PASSWORD}
+      ACESSO_API_URL: ${ACESSO_API_URL}
+      ACESSO_API_USER: ${ACESSO_API_USER}
+      ACESSO_API_PASSWORD: ${ACESSO_API_PASSWORD}
     volumes:
       - ${DATA_PATH}:/opt/dagster/data
       - ./src:/opt/dagster/app/src:ro
@@ -148,6 +154,9 @@ services:
       WP_IAG_SITE_URL: ${WP_IAG_SITE_URL}
       WP_IAG_USERNAME: ${WP_IAG_USERNAME}
       WP_IAG_PASSWORD: ${WP_IAG_PASSWORD}
+      ACESSO_API_URL: ${ACESSO_API_URL}
+      ACESSO_API_USER: ${ACESSO_API_USER}
+      ACESSO_API_PASSWORD: ${ACESSO_API_PASSWORD}
     ports:
       - "${WEBSERVER_PORT:-3000}:${WEBSERVER_PORT}"
     volumes:

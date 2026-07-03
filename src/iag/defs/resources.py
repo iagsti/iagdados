@@ -30,6 +30,15 @@ class ObfuscatorResource(dg.ConfigurableResource):
         hash_obj = hashlib.sha256(code_str.encode())
         hash_hex = hash_obj.hexdigest()
         return hash_hex[:length]
+    
+
+class CleanerResource(dg.ConfigurableResource):
+    def strip_columns(self, dataframe: pd.DataFrame):
+        columns = dataframe.columns.to_list()
+        for column_name in columns:
+            if isinstance(dataframe[column_name], str):
+                dataframe[column_name] = dataframe[column_name].str.strip()
+        return dataframe
 
 
 class IcebergResource(dg.ConfigurableResource):
