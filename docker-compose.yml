@@ -45,6 +45,9 @@ services:
       ACESSO_API_URL: ${ACESSO_API_URL}
       ACESSO_API_USER: ${ACESSO_API_USER}
       ACESSO_API_PASSWORD: ${ACESSO_API_PASSWORD}
+      HORUS_USERNAME: ${HORUS_USERNAME}
+      HORUS_PASSWORD: ${HORUS_PASSWORD}
+      HORUS_BASE_URL: ${HORUS_BASE_URL}
     volumes:
       - ${DATA_PATH}:/opt/dagster/data
       - ./src/:/opt/dagster/app/src:ro
@@ -103,6 +106,9 @@ services:
       ACESSO_API_URL: ${ACESSO_API_URL}
       ACESSO_API_USER: ${ACESSO_API_USER}
       ACESSO_API_PASSWORD: ${ACESSO_API_PASSWORD}
+      HORUS_USERNAME: ${HORUS_USERNAME}
+      HORUS_PASSWORD: ${HORUS_PASSWORD}
+      HORUS_BASE_URL: ${HORUS_BASE_URL}
     volumes:
       - ${DATA_PATH}:/opt/dagster/data
       - ./src:/opt/dagster/app/src:ro
@@ -157,6 +163,9 @@ services:
       ACESSO_API_URL: ${ACESSO_API_URL}
       ACESSO_API_USER: ${ACESSO_API_USER}
       ACESSO_API_PASSWORD: ${ACESSO_API_PASSWORD}
+      HORUS_USERNAME: ${HORUS_USERNAME}
+      HORUS_PASSWORD: ${HORUS_PASSWORD}
+      HORUS_BASE_URL: ${HORUS_BASE_URL}
     ports:
       - "${WEBSERVER_PORT:-3000}:${WEBSERVER_PORT}"
     volumes:
