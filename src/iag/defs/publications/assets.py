@@ -95,76 +95,61 @@ def publications_with_orcid_and_doi(
     return df
 
 
-@dg.asset(kinds={"pandas", "idceberg"})
-def publications_s3_data(
+@dg.asset()
+def publications_articles(
     context: dg.AssetExecutionContext,
-    iceberg_resource: IcebergResource,
+    crossref_api: CorssrefApiResource,
     publications_with_orcid_and_doi: pd.DataFrame,
 ):
-    df = publications_with_orcid_and_doi.copy()
-    iceberg_resource.save(
-        df, namespace="publications", table_name="raw_publications", context=context
-    )
-    return df
+    orcid_id_list = publications_with_orcid_and_doi["orcid_id"].to_list()
+    publication_data_list = []
+    for orcid in orcid_id_list:
+        publication_row = publications_with_orcid_and_doi[
+            publications_with_orcid_and_doi["orcid_id"] == orcid
+        ]
+        if not orcid or not (isinstance(orcid, str)):
+            context.log.warning("ORCID ID is missing for ")
+            continue
+        context.log.info(f"Extracting publication data for ORCID ID: {orcid}")
+        orcid_number = orcid.split("/")[-1]
+        crossref_data = crossref_api.get_publications_by_orcid(
+            context=context, orcid=orcid_number
+        )
+        publication_data = crossref_api.format_publications_data(crossref_data, context=context)
+        aditional_data = {
+            "orcid_id": orcid,
+            "nompes": publication_row["nompes"].iloc[0],
+            "nomabvset": publication_row["nomabvset"].iloc[0],
+            "tipvin": publication_row["tipvin"].iloc[0],
+            "tipvinext": publication_row["tipvinext"].iloc[0],
+            "codema": publication_row["codema"].iloc[0],
+        }
+        publication_data = crossref_api.set_additional_publication_data(
+            publication_data, **aditional_data
+        )
+        publication_data_list.extend(publication_data)
+    publications_articles_df = pd.DataFrame(publication_data_list)
+    return publications_articles_df
 
 
-# @dg.asset()
-# def publications_articles(
+@dg.asset(kinds={"pandas"})
+def publications_stored(publications_articles: pd.DataFrame, publications_db_target: SqlAlchemyResource):
+    con = publications_db_target.get_engine()
+    publications_articles.to_sql("publications", con=con, index=False, if_exists="replace")
+    return publications_articles
+
+
+# @dg.asset(kinds={"pandas", "idceberg"})
+# def publications_s3_data(
 #     context: dg.AssetExecutionContext,
-#     crossref_api: CorssrefApiResource,
+#     iceberg_resource: IcebergResource,
 #     publications_with_orcid_and_doi: pd.DataFrame,
 # ):
-#     orcid_id_list = publications_with_orcid_and_doi["orcid_id"].to_list()
-#     publication_data_list = []
-#     for orcid in orcid_id_list:
-#         publication_row = publications_with_orcid_and_doi[
-#             publications_with_orcid_and_doi["orcid_id"] == orcid
-#         ]
-#         if not orcid or not (isinstance(orcid, str)):
-#             context.log.warning("ORCID ID is missing for ")
-#             continue
-#         context.log.info(f"Extracting publication data for ORCID ID: {orcid}")
-#         orcid_number = orcid.split("/")[-1]
-#         crossref_data = crossref_api.get_publications_by_orcid(
-#             context=context, orcid=orcid_number
-#         )
-#         publication_data = crossref_api.format_publications_data(crossref_data)
-#         aditional_data = {
-#             "orcid_id": orcid,
-#             "nompes": publication_row["nompes"].iloc[0],
-#             "nomabvset": publication_row["nomabvset"].iloc[0],
-#             "tipvin": publication_row["tipvin"].iloc[0],
-#             "tipvinext": publication_row["tipvinext"].iloc[0],
-#             "codema": publication_row["codema"].iloc[0],
-#         }
-#         publication_data = crossref_api.set_additional_publication_data(
-#             publication_data, **aditional_data
-#         )
-#         publication_data_list.extend(publication_data)
-#     publications_articles_df = pd.DataFrame(publication_data_list)
-#     return publications_articles_df
-
-
-# @dg.asset(kinds={"pandas"})
-# def publications_orcid_api_data(
-#     context: dg.AssetExecutionContext,
-#     orcid_api: OrcidApiResource,
-#     publications_with_orcid_and_doi: pd.DataFrame,
-# ):
-#     orcid_id_list = publications_with_orcid_and_doi["orcid_id"].to_list()
-#     orcid_data_list = []
-#     for orcid_id in orcid_id_list:
-#         if not orcid_id or not (isinstance(orcid_id, str)):
-#             context.log.warning(f"ORCID ID {orcid_id} is missing for")
-#             continue
-#         context.log.info(f"Extracting publication data for ORCID ID: {orcid_id}")
-#         orcid_number = orcid_id.split("/")[-1]
-#         orcid_data = orcid_api.get_works_dois_by_orcid(
-#             context=context, orcid=orcid_number
-#         )
-#         orcid_data_list.extend(orcid_data)
-#     return pd.DataFrame(orcid_data_list)
-
+#     df = publications_with_orcid_and_doi.copy()
+#     iceberg_resource.save(
+#         df, namespace="publications", table_name="raw_publications", context=context
+#     )
+#     return df
 
 # @dg.asset(kinds={"pandas"})
 # def publications_teses_data(teses_resource: TesesUspResource):

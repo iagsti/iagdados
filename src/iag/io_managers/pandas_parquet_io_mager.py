@@ -4,7 +4,7 @@ from dagster import IOManager, io_manager
 
 class PandasParquetIOManager(IOManager):
     def __init__(self):
-        self._base_dir = "/opt/dagster/data"
+        self._base_dir = os.getenv("DATA_PATH", "/opt/dagster/data")
 
     def _get_path(self, context):
         asset_name = context.asset_key.path[-1]

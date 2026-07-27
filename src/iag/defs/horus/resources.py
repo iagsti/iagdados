@@ -5,6 +5,7 @@ import requests
 
 class HorusResource(dg.ConfigurableResource):
     base_url: str
+    proxy_server: str
     username: str
     password: str
 
@@ -14,8 +15,12 @@ class HorusResource(dg.ConfigurableResource):
             "usr": self.username,
             "pwd": self.password
         }
+        proxies = {
+            "http": self.proxy_server,
+            "https": self.proxy_server
+        }
         endpoint = f"{self.base_url}/obterToken"
-        response = requests.post(endpoint, headers=headers)
+        response = requests.post(endpoint, headers=headers, proxies=proxies)
         response.raise_for_status()
         response.raise_for_status()
         return response.json()["token"]

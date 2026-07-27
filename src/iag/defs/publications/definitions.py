@@ -10,7 +10,7 @@ def resources():
         resources={
             "replicado_con": SqlAlchemyResource(connection_string=dg.EnvVar("SQLSERVER_CONNECTION_STRING")),
             "crossref_api": CorssrefApiResource(base_url="https://api.crossref.org/works"),
-            "mysql_con": SqlAlchemyResource(connection_string=dg.EnvVar("MARIADB_CONNECTION_STRING")),
+            "publications_db_target": SqlAlchemyResource(connection_string=dg.EnvVar("MARIADB_CONNECTION_STRING")),
             "teses_resource": TesesUspResource(unidade="IAG"),
             "orcid_api": OrcidApiResource(client_id=dg.EnvVar("ORCID_CLIENT_ID"), client_secret=dg.EnvVar("ORCID_CLIENT_SECRET"), sandbox=False),
             "io_manager": pandas_parquet_io_manager,

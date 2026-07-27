@@ -52,7 +52,7 @@ class CorssrefApiResource(dg.ConfigurableResource):
     def format_link_data(self, links: list) -> list:
         return links[0].get("URL") if links else ""
  
-    def format_publications_data(self, coressref_data: dict) -> list:
+    def format_publications_data(self, coressref_data: dict, context: dg.AssetExecutionContext) -> list:
         if not coressref_data:
             return {}
         items = coressref_data.get("message", {}).get("items", [])
@@ -60,7 +60,9 @@ class CorssrefApiResource(dg.ConfigurableResource):
             return {}
         items_list = []
         for item in items:
+            context.log.info(item)
             published_online_data = item.get("published-online", {}).get("date-parts", [])
+            context.log.info(published_online_data)
             published_online = "-".join(published_online_data)
             formatted_publication_data = {
                 "indexed": item.get("indexed", {}).get("date-time"),
