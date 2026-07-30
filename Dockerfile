@@ -9,6 +9,16 @@ RUN apt-get update && apt-get install -y \
     git \
     tor \
     curl \
+    build-essential \
+    python3-dev \
+    libmariadb-dev \
+    pkg-config \
+    libpq-dev \
+    libxml2-dev \
+    libxslt-dev \
+    libsasl2-dev \
+    libldap2-dev \
+    libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Instalar uv
