@@ -55,6 +55,7 @@ services:
       - dagster_code_cache:/home/dagster/.cache
     networks:
       - dagster_network
+      - dokploy-network
     depends_on:
       postgres:
         condition: service_healthy
@@ -116,6 +117,7 @@ services:
       - dagster_daemon_cache:/home/dagster/.cache
     networks:
       - dagster_network
+      - dokploy-network
     depends_on:
       postgres:
         condition: service_healthy
@@ -175,6 +177,7 @@ services:
       - dagster_webserver_cache:/home/dagster/.cache
     networks:
       - dagster_network
+      - dokploy-network
     depends_on:
       postgres:
         condition: service_healthy
@@ -193,6 +196,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - dagster_network
+      - dokploy-network
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U dagster" ]
       interval: 10s
