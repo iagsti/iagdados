@@ -22,7 +22,7 @@ services:
       PYTHONPATH: /opt/dagster/app/src
 
       # PROJECT VARIABLES
-      DATA_PATH: ${DATA_PATH}
+      DATA_PATH: /opt/dagster/data
       MARIADB_CONNECTION_STRING: ${MARIADB_CONNECTION_STRING}
       CONTRATOS_API_BASE_URL: ${CONTRATOS_API_BASE_URL}
       SQLSERVER_CONNECTION_STRING: ${SQLSERVER_CONNECTION_STRING}
@@ -49,7 +49,7 @@ services:
       HORUS_PASSWORD: ${HORUS_PASSWORD}
       HORUS_BASE_URL: ${HORUS_BASE_URL}
     volumes:
-      - ${DATA_PATH}:/opt/dagster/data
+      - dagster_data:/opt/dagster/data
       - ./src/:/opt/dagster/app/src:ro
       - ./dagster_home:/opt/dagster/dagster_home
       - dagster_code_cache:/home/dagster/.cache
@@ -99,7 +99,7 @@ services:
       LAKEKEEPER_ENDPOINT: ${LAKEKEEPER_ENDPOINT}
       ENVIRONMENT: ${ENVIRONMENT:-production}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
-      DATA_PATH: ${DATA_PATH}
+      DATA_PATH: /opt/dagster/data
       WP_IAG_SITE_URL: ${WP_IAG_SITE_URL}
       WP_IAG_USERNAME: ${WP_IAG_USERNAME}
       WP_IAG_PASSWORD: ${WP_IAG_PASSWORD}
@@ -110,7 +110,7 @@ services:
       HORUS_PASSWORD: ${HORUS_PASSWORD}
       HORUS_BASE_URL: ${HORUS_BASE_URL}
     volumes:
-      - ${DATA_PATH}:/opt/dagster/data
+      - dagster_data:/opt/dagster/data
       - ./src:/opt/dagster/app/src:ro
       - ./dagster_home:/opt/dagster/dagster_home
       - dagster_daemon_cache:/home/dagster/.cache
@@ -148,7 +148,7 @@ services:
       MONGO_DATABASE_URI: ${MONGO_DATABASE_URI}
       PCA_CONNECTION_STRING: ${PCA_CONNECTION_STRING}
       COMPRASGOV_API_BASE_URL: ${COMPRASGOV_API_BASE_URL}
-      DATA_PATH: ${DATA_PATH}
+      DATA_PATH: /opt/dagster/data
       ORCID_CLIENT_ID: ${ORCID_CLIENT_ID}
       ORCID_CLIENT_SECRET: ${ORCID_CLIENT_SECRET}
       ORCID_SANDBOX: ${ORCID_SANDBOX}
@@ -169,7 +169,7 @@ services:
     ports:
       - "${WEBSERVER_PORT:-3000}:${WEBSERVER_PORT}"
     volumes:
-      - ${DATA_PATH}:/opt/dagster/data
+      - dagster_data:/opt/dagster/data
       - ./src:/opt/dagster/app/src:ro
       - ./dagster_home:/opt/dagster/dagster_home
       - dagster_webserver_cache:/home/dagster/.cache
@@ -201,6 +201,7 @@ services:
     restart: unless-stopped
 
 volumes:
+  dagster_data:
   postgres_data:
   dagster_code_cache:
   dagster_daemon_cache:

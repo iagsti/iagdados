@@ -25,7 +25,9 @@ RUN uv sync
 # NÃO copiar src/ - será mapeado via volume
 
 # Criar diretórios necessários
-RUN mkdir -p /opt/dagster/dagster_home/storage/logs
+RUN mkdir -p /opt/dagster/dagster_home/storage/logs && \
+    mkdir -p /opt/dagster/data
+
 
 # Expor portas
 EXPOSE ${WEBSERVER_PORT} ${DAEMON_PORT}
