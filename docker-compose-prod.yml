@@ -1,0 +1,20 @@
+services:
+  dagster_code_server:
+    networks:
+      - dokploy-network
+
+  dagster_daemon:
+    networks:
+      - dokploy-network
+
+  dagster_webserver:
+    networks:
+      - dokploy-network
+
+  postgres:
+    networks:
+      - dokploy-network
+
+networks:
+  dokploy-network:
+    external: true
