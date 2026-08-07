@@ -70,7 +70,7 @@ def alunospos_formatted(alunospos_cleaned: pd.DataFrame) -> pd.DataFrame:
 
 
 @dg.asset(kinds={"python", "pandas"})
-def alunospos_loaded_to_acesso(alunospos_formatted: pd.DataFrame, acesso_resource: AcessoResource):
+def alunospos_to_s3(alunospos_formatted: pd.DataFrame, acesso_resource: AcessoResource):
     payload = alunospos_formatted.to_dict(orient="records")
     acesso_resource.delete_pessoas()
     acesso_resource.insert_pessoas(payload=payload)

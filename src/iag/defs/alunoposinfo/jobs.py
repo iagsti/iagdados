@@ -9,6 +9,6 @@ alunosposinfo_job = dg.define_asset_job(
         assets.alunospos_raw_data,
         assets.alunospos_cleaned,
         assets.alunospos_formatted,
-        assets.alunospos_loaded_to_acesso,
+        assets.alunospos_to_s3,
     ],
 )
