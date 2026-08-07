@@ -1,6 +1,6 @@
 import dagster as dg
 from .resources import IcebergResource
-
+from .resources import SqlAlchemyResource
 
 @dg.definitions
 def resources():
@@ -12,6 +12,10 @@ def resources():
                 aws_access_key=dg.EnvVar("AWS_ACCESS_KEY"),
                 aws_secret_key=dg.EnvVar("AWS_SECRET_KEY"),
                 aws_region=dg.EnvVar("AWS_REGION"),
+            ),
+            "trino_resource": SqlAlchemyResource(
+                connection_string=dg.EnvVar("TRINO_CONNECTION_STRING")
             )
         }
     )
+

@@ -2,7 +2,7 @@ import re
 
 import dagster as dg
 import pandas as pd
-from ..resources import SqlAlchemyResource, CleanerResource
+from ..resources import SqlAlchemyResource, CleanerResource, IcebergResource
 from .resources import AcessoResource
 
 
@@ -69,11 +69,14 @@ def alunospos_formatted(alunospos_cleaned: pd.DataFrame) -> pd.DataFrame:
     return formatted_df
 
 
-@dg.asset(kinds={"python", "pandas"})
-def alunospos_loaded_to_acesso(alunospos_formatted: pd.DataFrame, acesso_resource: AcessoResource):
+@dg.asset(kinds={"python", "pandas", "iceberg"})
+def alunospos_loaded_to_acesso(
+        context: dg.AssetExecutionContext,
+        alunospos_formatted: pd.DataFrame,
+        iceberg_resource: IcebergResource
+    ):
     payload = alunospos_formatted.to_dict(orient="records")
-    acesso_resource.delete_pessoas()
-    acesso_resource.insert_pessoas(payload=payload)
+    iceberg_resource.save(df=payload, warehouse="pessoas", table="alunospos_info", context=context)
 
 
 

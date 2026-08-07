@@ -1,6 +1,6 @@
 [project]
 name = "iag"
-requires-python = ">=3.9,<3.14"
+requires-python = ">=3.10"
 version = "0.1.0"
 dependencies = [
     "beautifulsoup4>=4.14.2",
@@ -16,6 +16,7 @@ dependencies = [
     "pandas>=2.3.3",
     "psycopg>=3.2.13",
     "pyarrow>=21.0.0",
+    "pyhorus",
     "pyiceberg>=0.10.0",
     "pymongo>=4.15.4",
     "pymssql>=2.3.11",
@@ -24,6 +25,7 @@ dependencies = [
     "requests-tor>=1.4",
     "s3fs>=2025.10.0",
     "sqlalchemy>=2.0.44",
+    "trino[sqlalchemy]>=0.338.0",
 ]
 
 [dependency-groups]
@@ -52,5 +54,8 @@ root_module = "iag"
 registry_modules = [
     "iag.components.*",
 ]
+
+[tool.uv.sources]
+pyhorus = { git = "ssh://git@github.com/iagsti/pyhorus.git" }
 
 
