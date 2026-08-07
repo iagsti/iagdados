@@ -16,7 +16,7 @@ dependencies = [
     "pandas>=2.3.3",
     "psycopg>=3.2.13",
     "pyarrow>=21.0.0",
-    "pyhorus",
+    "pyhorus>=0.1.0",
     "pyiceberg>=0.10.0",
     "pymongo>=4.15.4",
     "pymssql>=2.3.11",
@@ -54,8 +54,5 @@ root_module = "iag"
 registry_modules = [
     "iag.components.*",
 ]
-
-[tool.uv.sources]
-pyhorus = { git = "ssh://git@github.com/iagsti/pyhorus.git" }
 
 
