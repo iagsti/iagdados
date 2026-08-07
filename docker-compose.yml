@@ -48,6 +48,7 @@ services:
       HORUS_USERNAME: ${HORUS_USERNAME}
       HORUS_PASSWORD: ${HORUS_PASSWORD}
       HORUS_BASE_URL: ${HORUS_BASE_URL}
+      TRINO_CONNECTION_STRING: ${TRINO_CONNECTION_STRING}
     volumes:
       - dagster_data:/opt/dagster/data
       - ./src/:/opt/dagster/app/src:ro
@@ -110,6 +111,7 @@ services:
       HORUS_USERNAME: ${HORUS_USERNAME}
       HORUS_PASSWORD: ${HORUS_PASSWORD}
       HORUS_BASE_URL: ${HORUS_BASE_URL}
+      TRINO_CONNECTION_STRING: ${TRINO_CONNECTION_STRING}
     volumes:
       - dagster_data:/opt/dagster/data
       - ./src:/opt/dagster/app/src:ro
@@ -168,6 +170,7 @@ services:
       HORUS_USERNAME: ${HORUS_USERNAME}
       HORUS_PASSWORD: ${HORUS_PASSWORD}
       HORUS_BASE_URL: ${HORUS_BASE_URL}
+      TRINO_CONNECTION_STRING: ${TRINO_CONNECTION_STRING}
     ports:
       - "${WEBSERVER_PORT:-3000}:${WEBSERVER_PORT}"
     volumes:
