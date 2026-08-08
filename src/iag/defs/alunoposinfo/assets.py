@@ -3,7 +3,7 @@ import re
 import dagster as dg
 import pandas as pd
 from ..resources import SqlAlchemyResource, CleanerResource
-from .resources import AcessoResource
+from .resources import AcessoResource, IcebergResource
 
 
 @dg.asset(kinds={"python", "pandas"})
@@ -69,11 +69,11 @@ def alunospos_formatted(alunospos_cleaned: pd.DataFrame) -> pd.DataFrame:
     return formatted_df
 
 
-@dg.asset(kinds={"python", "pandas"})
-def alunospos_to_s3(alunospos_formatted: pd.DataFrame, acesso_resource: AcessoResource):
-    payload = alunospos_formatted.to_dict(orient="records")
-    acesso_resource.delete_pessoas()
-    acesso_resource.insert_pessoas(payload=payload)
+@dg.asset()
+def alunospos_to_s3(context: dg.AssetExecutionContext ,alunospos_formatted: pd.Dataframe, iceberg_resource: IcebergResource):
+    df = alunospos_formatted
+    iceberg_resource.save(df=df, namespace="pessoas", table_name="aluospos_info", context=context)
+    return df
 
 
 
