@@ -52,7 +52,7 @@ services:
     volumes:
       - dagster_data:/opt/dagster/data
       - ./src/:/opt/dagster/app/src:ro
-      - ./dagster_home:/opt/dagster/dagster_home
+      - dagster_home:/opt/dagster/dagster_home
       - dagster_code_cache:/home/dagster/.cache
     networks:
       - dagster_network
@@ -114,7 +114,7 @@ services:
     volumes:
       - dagster_data:/opt/dagster/data
       - ./src:/opt/dagster/app/src:ro
-      - ./dagster_home:/opt/dagster/dagster_home
+      - dagster_home:/opt/dagster/dagster_home
       - dagster_daemon_cache:/home/dagster/.cache
     networks:
       - dagster_network
@@ -174,7 +174,7 @@ services:
     volumes:
       - dagster_data:/opt/dagster/data
       - ./src:/opt/dagster/app/src:ro
-      - ./dagster_home:/opt/dagster/dagster_home
+      - dagster_home:/opt/dagster/dagster_home
       - dagster_webserver_cache:/home/dagster/.cache
     networks:
       - dagster_network
@@ -206,6 +206,7 @@ services:
 volumes:
   dagster_data:
   postgres_data:
+  dagster_home:
   dagster_code_cache:
   dagster_daemon_cache:
   dagster_webserver_cache:

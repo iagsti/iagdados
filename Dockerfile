@@ -38,6 +38,11 @@ RUN uv sync
 RUN mkdir -p /opt/dagster/dagster_home/storage/logs && \
     mkdir -p /opt/dagster/data
 
+# Config fixa do Dagster (instance config + workspace) embutida na imagem,
+# para não depender de bind mount / permissões do host em produção
+COPY dagster_home/dagster.yaml /opt/dagster/dagster_home/dagster.yaml
+COPY dagster_home/workspace.yml /opt/dagster/dagster_home/workspace.yml
+
 
 # Expor portas
 EXPOSE ${WEBSERVER_PORT} ${DAEMON_PORT}
