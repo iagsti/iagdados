@@ -72,7 +72,7 @@ def alunospos_formatted(alunospos_cleaned: pd.DataFrame) -> pd.DataFrame:
 @dg.asset()
 def alunospos_to_s3(context: dg.AssetExecutionContext ,alunospos_formatted: pd.DataFrame, iceberg_resource: IcebergResource):
     df = alunospos_formatted
-    iceberg_resource.save(df=df, namespace="pessoas", table_name="aluospos_info", context=context)
+    iceberg_resource.save(df=df, namespace="pessoas", table_name="alunospos_info", context=context)
     return df
 
 
