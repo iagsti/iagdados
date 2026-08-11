@@ -39,10 +39,13 @@ RUN mkdir -p /opt/dagster/dagster_home/storage/logs && \
     mkdir -p /opt/dagster/data
 
 # Config fixa do Dagster (instance config + workspace) embutida na imagem,
-# para não depender de bind mount / permissões do host em produção
-COPY dagster_home/dagster.yaml /opt/dagster/dagster_home/dagster.yaml
-COPY dagster_home/workspace.yml /opt/dagster/dagster_home/workspace.yml
+# fora do caminho do volume. O entrypoint sincroniza isso para dentro do
+# DAGSTER_HOME a cada start, então não depende do volume estar vazio.
+COPY dagster_home/dagster.yaml /opt/dagster/config/dagster.yaml
+COPY dagster_home/workspace.yml /opt/dagster/config/workspace.yml
 
+COPY entrypoint.sh /opt/dagster/entrypoint.sh
+RUN chmod +x /opt/dagster/entrypoint.sh
 
 # Expor portas
 EXPOSE ${WEBSERVER_PORT} ${DAEMON_PORT}
@@ -52,3 +55,5 @@ RUN useradd -m -u 1000 dagster && \
     chown -R dagster:dagster /opt/dagster
 
 USER dagster
+
+ENTRYPOINT ["/opt/dagster/entrypoint.sh"]

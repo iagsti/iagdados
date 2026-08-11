@@ -15,12 +15,10 @@ def pessoa_raw(trino_resource: SqlAlchemyResource) -> pd.DataFrame:
     query = """
     SELECT
         codpes,
-        nome,
-        dt_nasc,
-        sexo,
-        email,
-        telefone
-    FROM pessoa_info
+        nompes,
+        codema,
+        nomabvfnc,
+    FROM alunoposinfo
     """
     engine = trino_resource.get_engine()
     with engine.connect() as connection:
