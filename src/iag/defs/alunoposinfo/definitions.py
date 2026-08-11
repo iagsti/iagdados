@@ -1,5 +1,4 @@
 import dagster as dg
-from src.iag.io_managers.pandas_parquet_io_mager import pandas_parquet_io_manager
 from .resources import AcessoResource
 from ..resources import SqlAlchemyResource, CleanerResource
 
@@ -15,6 +14,5 @@ def resources():
                 api_password=dg.EnvVar("ACESSO_API_PASSWORD")
             ),
             "alunosposinfo_cleaner": CleanerResource() ,
-            "io_manager": pandas_parquet_io_manager
         }
     )
