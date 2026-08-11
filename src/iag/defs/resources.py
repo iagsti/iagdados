@@ -1,44 +1,41 @@
-import dagster as dg
 import hashlib
+import dagster as dg
 import pandas as pd
 import pyarrow as pa
-from sqlalchemy import create_engine
 from pyiceberg.catalog.rest import RestCatalog
 from pyiceberg.exceptions import NamespaceAlreadyExistsError, NoSuchTableError
+from sqlalchemy import create_engine
 
 
 class SqlAlchemyResource(dg.ConfigurableResource):
     connection_string: str
 
     def get_engine(self):
-        engine = create_engine(self.connection_string)
-        return engine
+        return create_engine(self.connection_string)
 
 
 class ObfuscatorResource(dg.ConfigurableResource):
-    def obfuscate(self, codpes: int | str, length: int = 10):
+    def obfuscate(self, codpes: int | str, length: int = 10) -> str:
         """
-        Obfusca um código (int ou string) de forma determinística usando SHA-256.
-
-        :param code: O código a ser ofuscado (int ou str)
-        :param length: Tamanho do hash de saída (padrão: 10 caracteres)
-        :return: String com o código ofuscado
+        Ofusca um código (int ou string) de forma determinística usando SHA-256.
         """
         if not isinstance(codpes, (str, int)):
             raise TypeError("O código deve ser uma string ou um número inteiro.")
         code_str = str(codpes)
-        hash_obj = hashlib.sha256(code_str.encode())
-        hash_hex = hash_obj.hexdigest()
+        hash_hex = hashlib.sha256(code_str.encode()).hexdigest()
         return hash_hex[:length]
-    
+
 
 class CleanerResource(dg.ConfigurableResource):
-    def strip_columns(self, dataframe: pd.DataFrame):
-        columns = dataframe.columns.to_list()
-        for column_name in columns:
-            if isinstance(dataframe[column_name], str):
-                dataframe[column_name] = dataframe[column_name].str.strip()
-        return dataframe
+    def strip_columns(self, dataframe: pd.DataFrame) -> pd.DataFrame:
+        """
+        Remove espaços em branco no início e fim de colunas do tipo texto.
+        """
+        df = dataframe.copy()
+        for column_name in df.columns:
+            if pd.api.types.is_string_dtype(df[column_name]):
+                df[column_name] = df[column_name].astype(str).str.strip()
+        return df
 
 
 class IcebergResource(dg.ConfigurableResource):
@@ -60,8 +57,17 @@ class IcebergResource(dg.ConfigurableResource):
             "s3.path-style-access": "true",
             "s3.region": self.aws_region,
             "py-io-impl": "pyiceberg.io.pyarrow.PyArrowFileIO",
+            "s3.request-checksum-calculation": "when_required",
+            "s3.response-checksum-validation": "when_required",
         }
-        context.log.info(props)
+        
+        # Log seguro Omitindo credenciais sensíveis
+        safe_props = {
+            k: ("***" if "secret" in k or "key" in k else v)
+            for k, v in props.items()
+        }
+        context.log.info(f"Conectando ao catálogo Iceberg com props: {safe_props}")
+        
         return RestCatalog("lakekeeper", **props)
 
     def ensure_namespace(self, catalog: RestCatalog, namespace: str) -> None:
@@ -73,7 +79,6 @@ class IcebergResource(dg.ConfigurableResource):
     def upsert_table(
         self,
         catalog: RestCatalog,
-        warehouse: str,
         namespace: str,
         table_name: str,
         df: pd.DataFrame,
@@ -89,10 +94,10 @@ class IcebergResource(dg.ConfigurableResource):
             table = catalog.load_table(identifier)
             table.overwrite(arrow_table)
         except NoSuchTableError:
+            # Lakekeeper (REST Catalog) aloca a location automaticamente
             table = catalog.create_table(
                 identifier=identifier,
                 schema=arrow_table.schema,
-                location=f"s3://{warehouse}/{namespace}/{table_name}",
             )
             table.append(arrow_table)
 
@@ -106,10 +111,7 @@ class IcebergResource(dg.ConfigurableResource):
     ) -> None:
         """
         Método principal — salva um DataFrame como tabela Iceberg.
-
-        Uso:
-            iceberg.save(df, namespace="analytics", table_name="pessoas_info")
         """
         catalog = self.get_catalog(warehouse, context)
         self.ensure_namespace(catalog, namespace)
-        self.upsert_table(catalog, warehouse, namespace, table_name, df)
+        self.upsert_table(catalog, namespace, table_name, df)
