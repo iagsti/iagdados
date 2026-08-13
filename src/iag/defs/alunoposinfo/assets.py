@@ -63,6 +63,7 @@ def alunospos_formatted(alunospos_cleaned: pd.DataFrame) -> pd.DataFrame:
     formatted_df["nome"] = alunospos_cleaned["nompes"]
     formatted_df["num_usp"] = alunospos_cleaned["codpes"]
     formatted_df["cargo"] = alunospos_cleaned["sexpes"].apply(lambda x: cargo_mapping.get(x))
+    formatted_df["email"] = alunospos_cleaned["codema"]
     formatted_df["departamento"] = alunospos_cleaned["nomcur"]
     formatted_df["instituicao"] = "IAG"
     formatted_df["responsavel"] = alunospos_cleaned["orientador"]
