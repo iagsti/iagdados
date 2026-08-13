@@ -3,7 +3,7 @@ import dagster as dg
 import pandas as pd
 import pyarrow as pa
 from pyiceberg.catalog.rest import RestCatalog
-from pyiceberg.exceptions import NamespaceAlreadyExistsError, NoSuchTableError, ValidationError, ValidationException
+from pyiceberg.exceptions import NamespaceAlreadyExistsError, NoSuchTableError
 from sqlalchemy import create_engine
 
 
@@ -85,6 +85,7 @@ class IcebergResource(dg.ConfigurableResource):
     ) -> None:
         """
         Cria a tabela se não existir, ou sobrescreve os dados se já existir.
+        Evolui o schema automaticamente quando o DataFrame traz colunas novas.
         Idempotente — rodar duas vezes não duplica dados.
         """
         arrow_table = pa.Table.from_pandas(df, preserve_index=False)
@@ -92,7 +93,6 @@ class IcebergResource(dg.ConfigurableResource):
 
         try:
             table = catalog.load_table(identifier)
-            table.overwrite(arrow_table)
         except NoSuchTableError:
             # Lakekeeper (REST Catalog) aloca a location automaticamente
             table = catalog.create_table(
@@ -100,10 +100,11 @@ class IcebergResource(dg.ConfigurableResource):
                 schema=arrow_table.schema,
             )
             table.append(arrow_table)
-        except (ValueError, ValidationError, ValidationException) as e:
-            with table.update_schema() as schema_update:
-                schema_update.union_by_name(arrow_table.schema)
-                table.overwrite(arrow_table)
+            return
+
+        with table.update_schema() as schema_update:
+            schema_update.union_by_name(arrow_table.schema)
+        table.overwrite(arrow_table)
 
     def save(
         self,
