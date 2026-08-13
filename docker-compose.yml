@@ -53,7 +53,6 @@ services:
       TRINO_CONNECTION_STRING: ${TRINO_CONNECTION_STRING}
     volumes:
       - dagster_data:/opt/dagster/data
-      - ./src/:/opt/dagster/app/src:ro
       - dagster_home:/opt/dagster/dagster_home
       - dagster_code_cache:/home/dagster/.cache
     networks:
@@ -117,7 +116,6 @@ services:
       TRINO_CONNECTION_STRING: ${TRINO_CONNECTION_STRING}
     volumes:
       - dagster_data:/opt/dagster/data
-      - ./src:/opt/dagster/app/src:ro
       - dagster_home:/opt/dagster/dagster_home
       - dagster_daemon_cache:/home/dagster/.cache
     networks:
@@ -180,7 +178,6 @@ services:
       - "${WEBSERVER_PORT:-3000}:${WEBSERVER_PORT}"
     volumes:
       - dagster_data:/opt/dagster/data
-      - ./src:/opt/dagster/app/src:ro
       - dagster_home:/opt/dagster/dagster_home
       - dagster_webserver_cache:/home/dagster/.cache
     networks:

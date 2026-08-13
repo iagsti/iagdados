@@ -32,7 +32,8 @@ COPY uv.lock* ./
 RUN uv pip install --system --no-cache .
 RUN uv sync
 
-# NÃO copiar src/ - será mapeado via volume
+# Código da aplicação embutido na imagem (não depende de bind mount/estado do host em produção)
+COPY src/ /opt/dagster/app/src/
 
 # Criar diretórios necessários
 RUN mkdir -p /opt/dagster/dagster_home/storage/logs && \
