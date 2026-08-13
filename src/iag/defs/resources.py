@@ -3,7 +3,7 @@ import dagster as dg
 import pandas as pd
 import pyarrow as pa
 from pyiceberg.catalog.rest import RestCatalog
-from pyiceberg.exceptions import NamespaceAlreadyExistsError, NoSuchTableError
+from pyiceberg.exceptions import NamespaceAlreadyExistsError, NoSuchTableError, ValidationError, ValidationException
 from sqlalchemy import create_engine
 
 
@@ -100,6 +100,10 @@ class IcebergResource(dg.ConfigurableResource):
                 schema=arrow_table.schema,
             )
             table.append(arrow_table)
+        except (ValueError, ValidationError, ValidationException) as e:
+            with table.update_schema() as schema_update:
+                schema_update.union_by_name(arrow_table.schema)
+                table.overwrite(arrow_table)
 
     def save(
         self,
