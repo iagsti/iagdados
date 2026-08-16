@@ -3,7 +3,6 @@ import re
 import dagster as dg
 import pandas as pd
 from ..resources import SqlAlchemyResource, CleanerResource, IcebergResource
-from .resources import AcessoResource
 
 
 @dg.asset(kinds={"python", "pandas"})
