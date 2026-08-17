@@ -30,7 +30,7 @@ def acesso_pessoapos(acesso_resource: AcessoResource):
 
 @dg.asset(kinds={"python", "pandas"})
 def acesso_pessoapos_deleted(acesso_pessoapos: pd.DataFrame, acesso_alunoposinfo: pd.DataFrame):
-    deleted_df = acesso_alunoposinfo[~acesso_pessoaspos["num_usp"].isin(acesso_alunoposinfo["num_usp"])]
+    deleted_df = acesso_pessoapos[~acesso_pessoapos["num_usp"].isin(acesso_alunoposinfo["num_usp"])]
     deleted_df["deleted_at"] = pd.Timestamp.now()
     return deleted_df
 
