@@ -5,14 +5,14 @@ services:
       dockerfile: Dockerfile
     container_name: dagster_code_server
     command: >
-      dagster code-server start 
-      -h 0.0.0.0 
-      -p 4000 
+      dagster code-server start
+      -h 0.0.0.0
+      -p 4000
       -m iag.definitions
+    env_file:
+      - .env
     environment:
-      # Dagster configs
-      WEBSERVER_PORT: ${WEBSERVER_PORT}
-      DAEMON_PORT: ${DAEMON_PORT}
+      # Overrides/valores específicos do container (não vêm do .env)
       DAGSTER_HOME: /opt/dagster/dagster_home
       DAGSTER_POSTGRES_HOST: postgres
       DAGSTER_POSTGRES_USER: ${POSTGRES_USER}
@@ -20,37 +20,9 @@ services:
       DAGSTER_POSTGRES_DB: ${POSTGRES_DB}
       DAGSTER_POSTGRES_PORT: 5432
       PYTHONPATH: /opt/dagster/app/src
-
-      # PROJECT VARIABLES
       DATA_PATH: /opt/dagster/data
-      MARIADB_CONNECTION_STRING: ${MARIADB_CONNECTION_STRING}
-      CONTRATOS_API_BASE_URL: ${CONTRATOS_API_BASE_URL}
-      SQLSERVER_CONNECTION_STRING: ${SQLSERVER_CONNECTION_STRING}
-      PCA_CONNECTION_STRING: ${PCA_CONNECTION_STRING}
-      COMPRASGOV_API_BASE_URL: ${COMPRASGOV_API_BASE_URL}
-      MONGO_DATABASE_URI: ${MONGO_DATABASE_URI}
-      ORCID_CLIENT_ID: ${ORCID_CLIENT_ID}
-      ORCID_CLIENT_SECRET: ${ORCID_CLIENT_SECRET}
-      ORCID_SANDBOX: ${ORCID_SANDBOX}
-      AWS_ACCESS_KEY: ${AWS_ACCESS_KEY}
-      AWS_SECRET_KEY: ${AWS_SECRET_KEY}
-      AWS_S3_ENDPOINT: ${AWS_S3_ENDPOINT}
-      AWS_REGION: ${AWS_REGION}
-      LAKEKEEPER_ENDPOINT: ${LAKEKEEPER_ENDPOINT}
       AWS_REQUEST_CHECKSUM_CALCULATION: when_required
       AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
-      ENVIRONMENT: ${ENVIRONMENT:-production}
-      LOG_LEVEL: ${LOG_LEVEL:-INFO}
-      WP_IAG_SITE_URL: ${WP_IAG_SITE_URL}
-      WP_IAG_USERNAME: ${WP_IAG_USERNAME}
-      WP_IAG_PASSWORD: ${WP_IAG_PASSWORD}
-      ACESSO_API_URL: ${ACESSO_API_URL}
-      ACESSO_API_USER: ${ACESSO_API_USER}
-      ACESSO_API_PASSWORD: ${ACESSO_API_PASSWORD}
-      HORUS_USERNAME: ${HORUS_USERNAME}
-      HORUS_PASSWORD: ${HORUS_PASSWORD}
-      HORUS_BASE_URL: ${HORUS_BASE_URL}
-      TRINO_CONNECTION_STRING: ${TRINO_CONNECTION_STRING}
     volumes:
       - dagster_data:/opt/dagster/data
       - dagster_home:/opt/dagster/dagster_home
@@ -73,9 +45,10 @@ services:
       dockerfile: Dockerfile
     container_name: dagster_daemon
     command: dagster-daemon run -w /opt/dagster/dagster_home/workspace.yml
+    env_file:
+      - .env
     environment:
-      WEBSERVER_PORT: ${WEBSERVER_PORT}
-      DAEMON_PORT: ${DAEMON_PORT}
+      # Overrides/valores específicos do container (não vêm do .env)
       DAGSTER_HOME: /opt/dagster/dagster_home
       DAGSTER_POSTGRES_HOST: postgres
       DAGSTER_POSTGRES_USER: ${POSTGRES_USER}
@@ -83,37 +56,9 @@ services:
       DAGSTER_POSTGRES_DB: ${POSTGRES_DB}
       DAGSTER_POSTGRES_PORT: 5432
       PYTHONPATH: /opt/dagster/app/src
-
-      # PROJECT VARIABLES
-      MARIADB_CONNECTION_STRING: ${MARIADB_CONNECTION_STRING}
-      SQLSERVER_CONNECTION_STRING: ${SQLSERVER_CONNECTION_STRING}
-      MONGO_DATABASE_URI: ${MONGO_DATABASE_URI}
-      PCA_CONNECTION_STRING: ${PCA_CONNECTION_STRING}
-      COMPRASGOV_API_BASE_URL: ${COMPRASGOV_API_BASE_URL}
-      CONTRATOS_API_BASE_URL: ${CONTRATOS_API_BASE_URL}
-      ORCID_CLIENT_ID: ${ORCID_CLIENT_ID}
-      ORCID_CLIENT_SECRET: ${ORCID_CLIENT_SECRET}
-      ORCID_SANDBOX: ${ORCID_SANDBOX}
-      AWS_ACCESS_KEY: ${AWS_ACCESS_KEY}
-      AWS_SECRET_KEY: ${AWS_SECRET_KEY}
-      AWS_S3_ENDPOINT: ${AWS_S3_ENDPOINT}
-      AWS_REGION: ${AWS_REGION}
-      LAKEKEEPER_ENDPOINT: ${LAKEKEEPER_ENDPOINT}
+      DATA_PATH: /opt/dagster/data
       AWS_REQUEST_CHECKSUM_CALCULATION: when_required
       AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
-      ENVIRONMENT: ${ENVIRONMENT:-production}
-      LOG_LEVEL: ${LOG_LEVEL:-INFO}
-      DATA_PATH: /opt/dagster/data
-      WP_IAG_SITE_URL: ${WP_IAG_SITE_URL}
-      WP_IAG_USERNAME: ${WP_IAG_USERNAME}
-      WP_IAG_PASSWORD: ${WP_IAG_PASSWORD}
-      ACESSO_API_URL: ${ACESSO_API_URL}
-      ACESSO_API_USER: ${ACESSO_API_USER}
-      ACESSO_API_PASSWORD: ${ACESSO_API_PASSWORD}
-      HORUS_USERNAME: ${HORUS_USERNAME}
-      HORUS_PASSWORD: ${HORUS_PASSWORD}
-      HORUS_BASE_URL: ${HORUS_BASE_URL}
-      TRINO_CONNECTION_STRING: ${TRINO_CONNECTION_STRING}
     volumes:
       - dagster_data:/opt/dagster/data
       - dagster_home:/opt/dagster/dagster_home
@@ -135,9 +80,10 @@ services:
     command: >
       dagster-webserver -h 0.0.0.0 -p ${WEBSERVER_PORT}
       -w /opt/dagster/dagster_home/workspace.yml
+    env_file:
+      - .env
     environment:
-      WEBSERVER_PORT: ${WEBSERVER_PORT}
-      DAEMON_PORT: ${DAEMON_PORT}
+      # Overrides/valores específicos do container (não vêm do .env)
       DAGSTER_HOME: /opt/dagster/dagster_home
       DAGSTER_POSTGRES_HOST: postgres
       DAGSTER_POSTGRES_USER: ${POSTGRES_USER}
@@ -145,35 +91,9 @@ services:
       DAGSTER_POSTGRES_DB: ${POSTGRES_DB}
       DAGSTER_POSTGRES_PORT: 5432
       PYTHONPATH: /opt/dagster/app/src
-
-      # Code variables
-      MARIADB_CONNECTION_STRING: ${MARIADB_CONNECTION_STRING}
-      CONTRATOS_API_BASE_URL: ${CONTRATOS_API_BASE_URL}
-      SQLSERVER_CONNECTION_STRING: ${SQLSERVER_CONNECTION_STRING}
-      MONGO_DATABASE_URI: ${MONGO_DATABASE_URI}
-      PCA_CONNECTION_STRING: ${PCA_CONNECTION_STRING}
-      COMPRASGOV_API_BASE_URL: ${COMPRASGOV_API_BASE_URL}
       DATA_PATH: /opt/dagster/data
-      ORCID_CLIENT_ID: ${ORCID_CLIENT_ID}
-      ORCID_CLIENT_SECRET: ${ORCID_CLIENT_SECRET}
-      ORCID_SANDBOX: ${ORCID_SANDBOX}
-      AWS_ACCESS_KEY: ${AWS_ACCESS_KEY}
-      AWS_SECRET_KEY: ${AWS_SECRET_KEY}
-      AWS_S3_ENDPOINT: ${AWS_S3_ENDPOINT}
-      AWS_REGION: ${AWS_REGION}
-      LAKEKEEPER_ENDPOINT: ${LAKEKEEPER_ENDPOINT}
       AWS_REQUEST_CHECKSUM_CALCULATION: when_required
       AWS_RESPONSE_CHECKSUM_VALIDATION: when_required
-      WP_IAG_SITE_URL: ${WP_IAG_SITE_URL}
-      WP_IAG_USERNAME: ${WP_IAG_USERNAME}
-      WP_IAG_PASSWORD: ${WP_IAG_PASSWORD}
-      ACESSO_API_URL: ${ACESSO_API_URL}
-      ACESSO_API_USER: ${ACESSO_API_USER}
-      ACESSO_API_PASSWORD: ${ACESSO_API_PASSWORD}
-      HORUS_USERNAME: ${HORUS_USERNAME}
-      HORUS_PASSWORD: ${HORUS_PASSWORD}
-      HORUS_BASE_URL: ${HORUS_BASE_URL}
-      TRINO_CONNECTION_STRING: ${TRINO_CONNECTION_STRING}
     ports:
       - "${WEBSERVER_PORT:-3000}:${WEBSERVER_PORT}"
     volumes:
