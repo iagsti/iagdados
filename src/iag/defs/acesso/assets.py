@@ -29,8 +29,23 @@ def acesso_pessoapos(acesso_resource: AcessoResource):
 
 
 @dg.asset(kinds={"python", "pandas"})
-def acesso_pessoapos_deleted(acesso_pessoapos: pd.DataFrame, acesso_alunoposinfo: pd.DataFrame):
-    deleted_df = acesso_pessoapos[~acesso_pessoapos["num_usp"].isin(acesso_alunoposinfo["num_usp"])]
+def acesso_pessoapos_deleted(
+    context: dg.AssetExecutionContext,
+    acesso_pessoapos: pd.DataFrame,
+    acesso_alunoposinfo: pd.DataFrame,
+) -> pd.DataFrame:
+    for name, df in (("acesso_pessoapos", acesso_pessoapos), ("acesso_alunoposinfo", acesso_alunoposinfo)):
+        if "num_usp" not in df.columns:
+            context.log.error(
+                f"{name} veio sem a coluna 'num_usp'. shape={df.shape} colunas={list(df.columns)}"
+            )
+            raise ValueError(f"{name} sem a coluna 'num_usp' (colunas: {list(df.columns)})")
+
+    # num_usp vem como int64 do Trino e como string da API do Acesso — normaliza pra comparar
+    pessoapos_ids = acesso_pessoapos["num_usp"].astype(str)
+    alunoposinfo_ids = acesso_alunoposinfo["num_usp"].astype(str)
+
+    deleted_df = acesso_pessoapos[~pessoapos_ids.isin(alunoposinfo_ids)].copy()
     deleted_df["deleted_at"] = pd.Timestamp.now()
     return deleted_df
 
