@@ -42,7 +42,6 @@ def acesso_upsert(acesso_resource: AcessoResource, acesso_alunoposinfo: pd.DataF
 
 @dg.asset(kinds={"python", "pandas"})
 def acesso_soft_delete(acesso_resource: AcessoResource, acesso_pessoapos_deleted: pd.DataFrame):
-    for _, row in acesso_pessoapos_deleted.iterrows():
-        acesso_resource.soft_delete(row["num_usp"])
+    acesso_resource.upsert_pessoaspos(acesso_pessoapos_deleted)
 
 
