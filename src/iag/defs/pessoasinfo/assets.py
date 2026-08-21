@@ -154,19 +154,10 @@ def pessoasinfo_com_vinculo(
 
 
 @dg.asset(kinds={"pandas", "python"})
-def pessoasinfo_obfuscated(
-    pessoasinfo_com_vinculo: pd.DataFrame, obfuscator: ObfuscatorResource
+def pessoasinfo_persisted_data(
+    pessoasinfo_com_vinculo: pd.DataFrame, pessoasinfo_mysql_con: SqlAlchemyResource
 ):
     df = pessoasinfo_com_vinculo.copy()
-    df["codpes"] = df["codpes"].apply(obfuscator.obfuscate)
-    return df
-
-
-@dg.asset(kinds={"pandas", "python"})
-def pessoasinfo_persisted_data(
-    pessoasinfo_obfuscated: pd.DataFrame, pessoasinfo_mysql_con: SqlAlchemyResource
-):
-    df = pessoasinfo_obfuscated.copy()
     con = pessoasinfo_mysql_con.get_engine()
     df.to_sql(name="pessoas_info", con=con, if_exists="replace")
     return df
@@ -175,10 +166,12 @@ def pessoasinfo_persisted_data(
 @dg.asset(kinds={"pandas", "minio", "iceberg"})
 def pessoasinfo_s3_data(
     context: dg.AssetExecutionContext,
-    pessoasinfo_obfuscated: pd.DataFrame,
+    pessoasinfo_com_vinculo: pd.DataFrame,
     iceberg_resource: IcebergResource,
 ):
-    df = pessoasinfo_obfuscated.copy()
+    df = pessoasinfo_com_vinculo.copy()
+    df["codpes"] = df["codpes"].astype(str)
+    context.log.info(df.head())
     iceberg_resource.save(
         df, namespace="pessoas", table_name="pessoas_info", context=context
     )

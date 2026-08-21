@@ -1,5 +1,6 @@
 import dagster as dg
 from .resources import AcessoResource
+from ..resources import SqlAlchemyResource
 
 
 @dg.definitions
@@ -11,5 +12,8 @@ def resources():
                 api_user=dg.EnvVar("ACESSO_API_USER"),
                 api_password=dg.EnvVar("ACESSO_API_PASSWORD")
             ),
+            "acesso_relational_db": SqlAlchemyResource(
+                connection_string=dg.EnvVar("MARIADB_CONNECTION_STRING")
+            )
         }
     )

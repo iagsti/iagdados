@@ -5,7 +5,7 @@ from .resources import AcessoResource
 
 
 @dg.asset(kinds={"python", "pandas", "trino"})
-def acesso_alunoposinfo(trino_resource: SqlAlchemyResource) -> pd.DataFrame:
+def acesso_alunoposinfo(acesso_relational_db: SqlAlchemyResource) -> pd.DataFrame:
     query = """
     SELECT
         nome,
@@ -15,9 +15,9 @@ def acesso_alunoposinfo(trino_resource: SqlAlchemyResource) -> pd.DataFrame:
         instituicao,
         responsavel,
         email
-    FROM iceberg.pessoas.alunospos_info
+    FROM alunospos_info
     """
-    engine = trino_resource.get_engine()
+    engine = acesso_relational_db.get_engine()
     with engine.connect() as connection:
         df = pd.read_sql(query, connection)
     return df
@@ -25,7 +25,8 @@ def acesso_alunoposinfo(trino_resource: SqlAlchemyResource) -> pd.DataFrame:
 
 @dg.asset(kinds={"python", "pandas"})
 def acesso_pessoapos(acesso_resource: AcessoResource):
-    return acesso_resource.get_pessoaspos()
+    df =  acesso_resource.get_pessoaspos()
+    return df
 
 
 @dg.asset(kinds={"python", "pandas"})
@@ -41,7 +42,6 @@ def acesso_pessoapos_deleted(
             )
             raise ValueError(f"{name} sem a coluna 'num_usp' (colunas: {list(df.columns)})")
 
-    # num_usp vem como int64 do Trino e como string da API do Acesso — normaliza pra comparar
     pessoapos_ids = acesso_pessoapos["num_usp"].astype(str)
     alunoposinfo_ids = acesso_alunoposinfo["num_usp"].astype(str)
 
@@ -60,3 +60,33 @@ def acesso_soft_delete(acesso_resource: AcessoResource, acesso_pessoapos_deleted
     acesso_resource.upsert_pessoaspos(acesso_pessoapos_deleted)
 
 
+@dg.asset(kinds={"python", "pandas"})
+def acesso_pessoasinfo(acesso_relational_db: SqlAlchemyResource) -> pd.DataFrame:
+    query = """
+        SELECT
+            pessoas.codpes num_usp,
+            pessoas.nompes nome,
+            pessoas.codema email,
+            pessoas.nomabvfnc cargo,
+            pessoas.nomabvset departamento
+        FROM pessoas_info pessoas
+    """
+    engine = acesso_relational_db.get_engine()
+    with engine.connect() as connection:
+        df = pd.read_sql(query, connection)
+    return df
+
+
+@dg.asset(kinds={"python", "pandas"})
+def acesso_pessoasinfo_without_duplicates(acesso_pessoasinfo: pd.DataFrame) -> pd.DataFrame:
+    return acesso_pessoasinfo.drop_duplicates(subset="num_usp", keep="first")
+
+
+@dg.asset(kinds={"python", "pandas"})
+def acesso_upsert_pessoasinfo(
+    acesso_resource: AcessoResource,
+    acesso_pessoasinfo_without_duplicates: pd.DataFrame,
+):
+    df = acesso_pessoasinfo_without_duplicates.copy()
+    df["num_usp"] = df["num_usp"].astype(str)
+    acesso_resource.upsert_pessoasinfo(df)

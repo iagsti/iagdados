@@ -83,28 +83,25 @@ class IcebergResource(dg.ConfigurableResource):
         table_name: str,
         df: pd.DataFrame,
     ) -> None:
-        """
-        Cria a tabela se não existir, ou sobrescreve os dados se já existir.
-        Evolui o schema automaticamente quando o DataFrame traz colunas novas.
-        Idempotente — rodar duas vezes não duplica dados.
-        """
         arrow_table = pa.Table.from_pandas(df, preserve_index=False)
         identifier = (namespace, table_name)
-
+    
         try:
             table = catalog.load_table(identifier)
         except NoSuchTableError:
-            # Lakekeeper (REST Catalog) aloca a location automaticamente
             table = catalog.create_table(
                 identifier=identifier,
                 schema=arrow_table.schema,
             )
             table.append(arrow_table)
             return
-
-        with table.update_schema() as schema_update:
-            schema_update.union_by_name(arrow_table.schema)
-        table.overwrite(arrow_table)
+    
+        # Usar transação atômica evita o desalinhamento de metadados
+        with table.transaction() as txn:
+            with txn.update_schema() as schema_update:
+                schema_update.union_by_name(arrow_table.schema)
+            
+            txn.overwrite(arrow_table)
 
     def save(
         self,

@@ -12,5 +12,8 @@ acesso_job = dg.define_asset_job(
         assets.acesso_pessoapos_deleted,
         assets.acesso_upsert,
         assets.acesso_soft_delete,
+        assets.acesso_pessoasinfo,
+        assets.acesso_pessoasinfo_without_duplicates,
+        assets.acesso_upsert_pessoasinfo
     ]
 )

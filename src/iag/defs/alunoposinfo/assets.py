@@ -69,6 +69,14 @@ def alunospos_formatted(alunospos_cleaned: pd.DataFrame) -> pd.DataFrame:
     return formatted_df
 
 
+@dg.asset(kinds={"python", "pandas", "trino"})
+def alunospos_persisted_data(alunospos_formatted: pd.DataFrame, alunosposinfo_relational_db: SqlAlchemyResource) -> pd.DataFrame:
+    engine = alunosposinfo_relational_db.get_engine()
+    with engine.connect() as connection:
+        alunospos_formatted.to_sql("alunospos_info", con=connection, if_exists="replace", index=False)
+    return alunospos_formatted
+
+    
 @dg.asset()
 def alunospos_to_s3(context: dg.AssetExecutionContext ,alunospos_formatted: pd.DataFrame, iceberg_resource: IcebergResource):
     df = alunospos_formatted
