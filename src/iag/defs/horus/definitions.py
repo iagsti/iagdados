@@ -1,7 +1,6 @@
 import dagster as dg
 from .resources import HorusResource
-from ..resources import SqlAlchemyResource
-from src.iag.io_managers.pandas_parquet_io_mager import pandas_parquet_io_manager
+from ..resources import SqlAlchemyResource, IcebergResource
 
 
 @dg.definitions
@@ -13,10 +12,6 @@ def resources():
                 username=dg.EnvVar("HORUS_USERNAME"),
                 password=dg.EnvVar("HORUS_PASSWORD"),
                 proxy_server="http://10.70.1.8:3128"
-            ),
-            "horus_target": SqlAlchemyResource(
-                connection_string=dg.EnvVar("MARIADB_CONNECTION_STRING")
-            ),
-            "io_manager": pandas_parquet_io_manager
+            )
         }
     )
