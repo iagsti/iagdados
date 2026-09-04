@@ -87,6 +87,40 @@ class IcebergResource(dg.ConfigurableResource):
         except NamespaceAlreadyExistsError:
             pass
 
+    def _resolve_null_type(
+        self, data_type: pa.DataType, reference_type: pa.DataType | None
+    ) -> pa.DataType:
+        """
+        Substitui pa.null() (inclusive aninhado em list/struct, ex.: colunas de
+        lista totalmente vazias viram list<null>) por um tipo concreto, já que o
+        Iceberg (format-version 2) não aceita pa.null() em nenhum nível.
+        """
+        if pa.types.is_null(data_type):
+            if reference_type is not None and not pa.types.is_null(reference_type):
+                return reference_type
+            return pa.string()
+        if pa.types.is_list(data_type):
+            reference_value_type = (
+                reference_type.value_type
+                if reference_type is not None and pa.types.is_list(reference_type)
+                else None
+            )
+            new_value_type = self._resolve_null_type(data_type.value_type, reference_value_type)
+            return data_type if new_value_type == data_type.value_type else pa.list_(new_value_type)
+        if pa.types.is_struct(data_type):
+            reference_fields = (
+                {f.name: f.type for f in reference_type}
+                if reference_type is not None and pa.types.is_struct(reference_type)
+                else {}
+            )
+            new_fields, changed = [], False
+            for field in data_type:
+                new_type = self._resolve_null_type(field.type, reference_fields.get(field.name))
+                changed = changed or new_type != field.type
+                new_fields.append(pa.field(field.name, new_type))
+            return pa.struct(new_fields) if changed else data_type
+        return data_type
+
     def _resolve_null_types(
         self, arrow_table: pa.Table, reference_schema: pa.Schema | None
     ) -> pa.Table:
@@ -103,8 +137,8 @@ class IcebergResource(dg.ConfigurableResource):
         fields, columns, changed = [], [], False
         for field in arrow_table.schema:
             column = arrow_table.column(field.name)
-            if pa.types.is_null(field.type):
-                target_type = reference_types.get(field.name, pa.string())
+            target_type = self._resolve_null_type(field.type, reference_types.get(field.name))
+            if target_type != field.type:
                 column = column.cast(target_type)
                 field = field.with_type(target_type)
                 changed = True
@@ -178,7 +212,6 @@ class IcebergResource(dg.ConfigurableResource):
         from_type: str = "from_pandas",
         **kwargs: dict
     ) -> None:
-        kwargs = {"preserve_index": False} if not kwargs else kwargs
         arrow_table = getattr(pa.Table, from_type)(df, **kwargs)
         table, created, arrow_table = self._get_or_create_table(
             catalog, namespace, table_name, arrow_table

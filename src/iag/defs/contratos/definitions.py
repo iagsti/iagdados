@@ -1,5 +1,4 @@
 import dagster as dg
-from src.iag.io_managers.pandas_parquet_io_mager import pandas_parquet_io_manager
 from .resources import ContratosAPIResource
 from ..resources import SqlAlchemyResource
 

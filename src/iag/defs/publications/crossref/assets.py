@@ -147,7 +147,12 @@ def publications_s3_data(
 ):
     df = publications_with_orcid_and_doi.copy()
     iceberg_resource.save(
-        df, namespace="publications", table_name="raw_publications", context=context
+        df,
+        namespace="publications",
+        table_name="raw_publications",
+        context=context,
+        from_type="from_pandas",
+        **{"preserve_index": False},
     )
     return df
 

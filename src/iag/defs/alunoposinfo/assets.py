@@ -80,7 +80,14 @@ def alunospos_persisted_data(alunospos_formatted: pd.DataFrame, alunosposinfo_re
 @dg.asset()
 def alunospos_to_s3(context: dg.AssetExecutionContext ,alunospos_formatted: pd.DataFrame, iceberg_resource: IcebergResource):
     df = alunospos_formatted
-    iceberg_resource.save(df=df, namespace="pessoas", table_name="alunospos_info", context=context)
+    iceberg_resource.save(
+        df=df,
+        namespace="pessoas",
+        table_name="alunospos_info",
+        context=context,
+        from_type="from_pandas",
+        **{"preserve_index": False},
+    )
     return df
 
 

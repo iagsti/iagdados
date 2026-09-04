@@ -6,6 +6,12 @@ from ..resources import SqlAlchemyResource, ObfuscatorResource, IcebergResource
 from .resources import LocalsApiResource, PessoasResource
 
 
+def get_pessoa_exceptions():
+    return [
+        {"codpes": 1253683, "codema": "paula.coelho@iag.usp.br"}
+    ]
+
+
 @dg.asset(kinds={"python", "pandas"})
 def pessoasinfo_raw_data(pessoasinfo_replicado_db: SqlAlchemyResource) -> pd.DataFrame:
     query = """
@@ -154,10 +160,22 @@ def pessoasinfo_com_vinculo(
 
 
 @dg.asset(kinds={"pandas", "python"})
-def pessoasinfo_persisted_data(
-    pessoasinfo_com_vinculo: pd.DataFrame, pessoasinfo_mysql_con: SqlAlchemyResource
-):
+def pessoasinfo_exceptions_aplyed(pessoasinfo_com_vinculo: pd.DataFrame):
     df = pessoasinfo_com_vinculo.copy()
+    exceptions = get_pessoa_exceptions()
+    for exception in exceptions:
+        codpes = exception["codpes"]
+        codema = exception["codema"]
+        if codpes in df["codpes"].values:
+            df.loc[df["codpes"] == codpes, "codema"] = codema
+    return df
+
+
+@dg.asset(kinds={"pandas", "python"})
+def pessoasinfo_persisted_data(
+    pessoasinfo_exceptions_aplyed: pd.DataFrame, pessoasinfo_mysql_con: SqlAlchemyResource
+):
+    df = pessoasinfo_exceptions_aplyed.copy()
     con = pessoasinfo_mysql_con.get_engine()
     df.to_sql(name="pessoas_info", con=con, if_exists="replace")
     return df
@@ -173,6 +191,11 @@ def pessoasinfo_s3_data(
     df["codpes"] = df["codpes"].astype(str)
     context.log.info(df.head())
     iceberg_resource.save(
-        df, namespace="pessoas", table_name="pessoas_info", context=context
+        df,
+        namespace="pessoas",
+        table_name="pessoas_info",
+        context=context,
+        from_type="from_pandas",
+        **{"preserve_index": False},
     )
     return df

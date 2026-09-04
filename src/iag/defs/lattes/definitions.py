@@ -1,5 +1,4 @@
 import dagster as dg
-from src.iag.io_managers.pandas_parquet_io_mager import pandas_parquet_io_manager
 from .resources import LattesExtractorResource, LattesLinkTableResource
 from ..resources import SqlAlchemyResource
 
@@ -19,6 +18,5 @@ def resources():
                 connection_string=MARIADB_CONNECTION_STRING
             ),
             "lattes_link_table": LattesLinkTableResource(),
-            "io_manager": pandas_parquet_io_manager,
         }
     )

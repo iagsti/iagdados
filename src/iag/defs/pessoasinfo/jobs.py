@@ -15,6 +15,7 @@ pessoasinfo_job = dg.define_asset_job(
         assets.pessoasinfo_sanitized,
         assets.pessoasinfo_professor_senior,
         assets.pessoasinfo_com_vinculo,
+        assets.pessoasinfo_exceptions_aplyed,
         assets.pessoasinfo_persisted_data,
         assets.pessoasinfo_s3_data,
     ],

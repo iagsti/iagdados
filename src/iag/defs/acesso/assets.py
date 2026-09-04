@@ -11,6 +11,11 @@ def acesso_alunoposinfo(acesso_relational_db: SqlAlchemyResource) -> pd.DataFram
         nome,
         num_usp,
         cargo,
+		CASE departamento
+		WHEN 'Astronomia' THEN 'AGA'
+		WHEN 'Geofísica'  THEN 'AGG'
+		WHEN 'Meteorologia' THEN 'ACA'
+		END
         departamento,
         instituicao,
         responsavel,
