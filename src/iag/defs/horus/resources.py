@@ -4,7 +4,7 @@ import dagster as dg
 import requests
 
 RECENT_LOG_ENDPOINT_LIMIT = 67
-REQUEST_DELAY_SECONDS = 2
+REQUEST_DELAY_SECONDS = 5
 
 
 class HorusResource(dg.ConfigurableResource):
@@ -44,9 +44,9 @@ class HorusResource(dg.ConfigurableResource):
         hoje = date.today()
         return (hoje - data_inicial).days + 1
 
-    def get_date_list(self, initial_date: str, end_date: str = "") -> list[str]:
+    def get_date_list(self, initial_date: datetime, end_date: str = "") -> list[str]:
         date_format = "%Y-%m-%d"
-        initial = datetime.strptime(initial_date, "%Y/%m/%d").date()
+        initial = initial_date
         end = datetime.today().date() if not end_date else datetime.strptime(end_date, date_format).date()
         date_list = []
         current_date = initial
@@ -104,7 +104,7 @@ class HorusResource(dg.ConfigurableResource):
             return self.listar_log(token, data, context)
         return self.listar_log_historico(token, data, context)
 
-    def iter_logs_since(self, start_date: str, context: dg.AssetExecutionContext):
+    def iter_logs_since(self, start_date: datetime, context: dg.AssetExecutionContext):
         """
         Itera dia a dia os logs de acesso desde `start_date` (formato "%Y/%m/%d") até hoje,
         produzindo (data, logs) a cada dia processado — em vez de acumular tudo em memória.

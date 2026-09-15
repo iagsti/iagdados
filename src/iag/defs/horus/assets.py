@@ -1,5 +1,6 @@
 import dagster as dg
 import pandas as pd
+from datetime import datetime, timedelta
 from .resources import HorusResource
 from ..resources import SqlAlchemyResource, IcebergResource
 
@@ -43,8 +44,9 @@ def horus_log_historico_persisted(
     enviado ao Iceberg imediatamente após a extração. Assim, se a extração falhar
     no meio do caminho, os dias já processados permanecem salvos.
     """
-    start_date = last_log_date.iat[0, 0] if not last_log_date.empty else DEFAULT_START_DATE
-
+    last_date = last_log_date.iat[0, 0] if not last_log_date.empty else DEFAULT_START_DATE
+    start_date = datetime.strptime(last_date, "%Y/%m/%d").date()
+    start_date = start_date + timedelta(days=1)
     for date_item, log_list in horus_resource.iter_logs_since(start_date=start_date, context=context):
         if not log_list:
             continue
