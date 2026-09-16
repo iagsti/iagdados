@@ -44,10 +44,13 @@ class HorusResource(dg.ConfigurableResource):
         hoje = date.today()
         return (hoje - data_inicial).days + 1
 
-    def get_date_list(self, initial_date: datetime, end_date: str = "") -> list[str]:
+    def get_date_list(self, initial_date: datetime, end_date: datetime = None) -> list[str]:
         date_format = "%Y-%m-%d"
         initial = initial_date
-        end = datetime.today().date() if not end_date else datetime.strptime(end_date, date_format).date()
+        if end_date is None:
+            end = datetime.today().date()
+        else:
+            end = end_date
         date_list = []
         current_date = initial
 
@@ -109,14 +112,14 @@ class HorusResource(dg.ConfigurableResource):
         Itera dia a dia os logs de acesso desde `start_date` (formato "%Y/%m/%d") até hoje,
         produzindo (data, logs) a cada dia processado — em vez de acumular tudo em memória.
         """
-        date_list = self.get_date_list(initial_date=start_date)
+        threshould_date = datetime.now() - timedelta(days=90)
+        if start_date > threshould_date:
+            date_list = self.get_date_list(initial_date=start_date)
+        else:
+            date_list = self.get_date_list(initial_date=start_date, end_date=threshould_date)
         token = self.get_token()
-
         for date_item in date_list:
             context.log.info(f"Processing date {date_item}")
-            # Recalculado por dia: a API usa um endpoint para datas recentes e outro
-            # para datas antigas, então o intervalo precisa refletir cada `date_item`,
-            # não apenas o `start_date` original.
             ano, mes, dia = (int(part) for part in date_item.split("-"))
             date_interval = self.calc_date_interval(ano_inicio=ano, mes_inicio=mes, dia_inicio=dia)
             logs = self.update_logs(
@@ -129,4 +132,3 @@ class HorusResource(dg.ConfigurableResource):
             context.log.info(f"Fetched {len(logs)} logs for {date_item}")
             yield date_item, logs
             sleep(REQUEST_DELAY_SECONDS)
-
