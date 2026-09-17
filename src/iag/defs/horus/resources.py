@@ -54,7 +54,7 @@ class HorusResource(dg.ConfigurableResource):
         date_list = []
         current_date = initial
 
-        while current_date <= end:
+        while current_date <= end.date():
             date_list.append(current_date.strftime(date_format))
             current_date += timedelta(days=1)
         return date_list
@@ -112,8 +112,9 @@ class HorusResource(dg.ConfigurableResource):
         Itera dia a dia os logs de acesso desde `start_date` (formato "%Y/%m/%d") até hoje,
         produzindo (data, logs) a cada dia processado — em vez de acumular tudo em memória.
         """
+        context.log.info(f"Starting log iteration from {start_date}")
         threshould_date = datetime.now() - timedelta(days=90)
-        if start_date > threshould_date:
+        if start_date > threshould_date.date():
             date_list = self.get_date_list(initial_date=start_date)
         else:
             date_list = self.get_date_list(initial_date=start_date, end_date=threshould_date)

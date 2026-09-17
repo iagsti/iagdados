@@ -8,7 +8,7 @@ DEFAULT_START_DATE = "2023/03/21"
 
 
 @dg.asset(kinds={"python", "pandas", "trino"})
-def last_log_date(trino_resource: SqlAlchemyResource) -> pd.DataFrame:
+def last_log_date(context: dg.AssetExecutionContext, trino_resource: SqlAlchemyResource) -> pd.DataFrame:
     """Extrai a data do último log persistido, se houver."""
     try:
         engine = trino_resource.get_engine()
@@ -18,8 +18,11 @@ def last_log_date(trino_resource: SqlAlchemyResource) -> pd.DataFrame:
             ORDER BY data desc
             LIMIT 1
         """
-        return pd.read_sql(query, con=engine)
+        last_log = pd.read_sql(query, con=engine)
+        context.log.info(last_log)
+        return last_log
     except Exception:
+        context.log.error("Error occurred while fetching last log date")
         return pd.DataFrame()
 
 

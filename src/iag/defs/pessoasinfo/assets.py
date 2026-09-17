@@ -7,9 +7,12 @@ from .resources import LocalsApiResource, PessoasResource
 
 
 def get_pessoa_exceptions():
-    return [
-        {"codpes": 1253683, "codema": "paula.coelho@iag.usp.br"}
+    pessoas_exceptions = [
+        {"codpes": 1253683, "codema": "paula.coelho@iag.usp.br"},
+        {"codpes": 1253683, "nompes": "Juliana Paula Coelho"}
     ]
+    pessoas_exceptions = pd.DataFrame(pessoas_exceptions).set_index("codpes")
+    return pessoas_exceptions
 
 
 @dg.asset(kinds={"python", "pandas"})
@@ -163,11 +166,9 @@ def pessoasinfo_com_vinculo(
 def pessoasinfo_exceptions_aplyed(pessoasinfo_com_vinculo: pd.DataFrame):
     df = pessoasinfo_com_vinculo.copy()
     exceptions = get_pessoa_exceptions()
-    for exception in exceptions:
-        codpes = exception["codpes"]
-        codema = exception["codema"]
-        if codpes in df["codpes"].values:
-            df.loc[df["codpes"] == codpes, "codema"] = codema
+    df = df.set_index("codpes")
+    df.update(exceptions)
+    df = df.reset_index()
     return df
 
 
