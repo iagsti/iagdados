@@ -64,5 +64,5 @@ def alunosic_with_nomfnc(alunosic_exceptions_aplyed: pd.DataFrame) -> pd.DataFra
 def alunosic_load(alunosic_with_nomfnc: pd.DataFrame, alunosic_mysql_con: SqlAlchemyResource) -> pd.DataFrame:
     df = alunosic_with_nomfnc.copy()
     engine = alunosic_mysql_con.get_engine()
-    df.to_sql("alunos_ic", con=engine, if_exists="append", index=False)
+    df.to_sql("alunos_ic", con=engine, if_exists="replace", index=False)
     return df
