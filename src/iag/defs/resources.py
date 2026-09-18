@@ -1,4 +1,5 @@
 import hashlib
+import os
 import dagster as dg
 import pandas as pd
 import pyarrow as pa
@@ -6,6 +7,15 @@ from pyiceberg.catalog.rest import RestCatalog
 from pyiceberg.exceptions import NamespaceAlreadyExistsError, NoSuchTableError
 from pyiceberg.table import TableProperties
 from sqlalchemy import create_engine
+
+# O pyiceberg usa fsspec/s3fs (botocore) para gravar os manifests, que por
+# padrão calcula e envia um checksum (x-amz-checksum-*) no upload. Nosso
+# endpoint S3 não valida esse checksum da mesma forma e rejeita o PutObject
+# com XAmzContentChecksumMismatch. As props "s3.request-checksum-calculation"
+# passadas ao catálogo Iceberg não têm efeito (nenhuma FileIO do pyiceberg as
+# lê), então desligamos via variável de ambiente lida pelo próprio botocore.
+os.environ.setdefault("AWS_REQUEST_CHECKSUM_CALCULATION", "when_required")
+os.environ.setdefault("AWS_RESPONSE_CHECKSUM_VALIDATION", "when_required")
 
 # Tamanho-alvo de cada arquivo parquet gravado no lake. Menor que o padrão do
 # pyiceberg (512 MiB) para que tabelas grandes sejam divididas em vários

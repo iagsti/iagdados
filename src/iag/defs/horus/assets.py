@@ -55,12 +55,13 @@ def horus_log_historico_persisted(
             continue
         df = _logs_to_dataframe(log_list)
         iceberg_resource.save(
-            context=context,
-            df=df,
-            warehouse="lake",
+            df,
             namespace="horus",
             table_name="log",
+            context=context,
             from_type="from_pandas",
             **{"preserve_index": False},
         )
         context.log.info(f"Persisted {len(df)} logs for {date_item}")
+    return df
+
