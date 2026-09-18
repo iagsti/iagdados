@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 from .resources import HorusResource
 from ..resources import SqlAlchemyResource, IcebergResource
 
+
 DEFAULT_START_DATE = "2023/03/21"
 
 
@@ -54,7 +55,7 @@ def horus_log_historico_persisted(
         if not log_list:
             continue
         df = _logs_to_dataframe(log_list)
-        iceberg_resource.save(
+        iceberg_resource.append(
             df,
             namespace="horus",
             table_name="log",
@@ -63,5 +64,4 @@ def horus_log_historico_persisted(
             **{"preserve_index": False},
         )
         context.log.info(f"Persisted {len(df)} logs for {date_item}")
-    return df
 
