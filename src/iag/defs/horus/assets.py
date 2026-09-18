@@ -57,6 +57,7 @@ def horus_log_historico_persisted(
         iceberg_resource.append(
             context=context,
             df=df,
+            warehouse="lake",
             namespace="horus",
             table_name="log",
             from_type="from_pandas",
