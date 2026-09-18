@@ -54,7 +54,7 @@ def horus_log_historico_persisted(
         if not log_list:
             continue
         df = _logs_to_dataframe(log_list)
-        iceberg_resource.append(
+        iceberg_resource.save(
             context=context,
             df=df,
             warehouse="lake",
