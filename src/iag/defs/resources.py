@@ -17,6 +17,12 @@ from sqlalchemy import create_engine
 os.environ.setdefault("AWS_REQUEST_CHECKSUM_CALCULATION", "when_required")
 os.environ.setdefault("AWS_RESPONSE_CHECKSUM_VALIDATION", "when_required")
 
+# O Lakekeeper usa remote signing: o pyiceberg registra o assinador no botocore
+# a cada thread do pool de leitura/escrita. Com várias threads, algumas
+# requisições (HEAD do manifest list) saem sem assinatura e o MinIO responde
+# 403 AccessDenied de forma intermitente. Uma única thread elimina a corrida.
+os.environ.setdefault("PYICEBERG_MAX_WORKERS", "1")
+
 # Tamanho-alvo de cada arquivo parquet gravado no lake. Menor que o padrão do
 # pyiceberg (512 MiB) para que tabelas grandes sejam divididas em vários
 # arquivos menores, reduzindo o tempo de cada upload individual ao S3 e
