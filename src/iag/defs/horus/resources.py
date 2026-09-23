@@ -2,6 +2,7 @@ from datetime import datetime, timedelta, date
 from time import sleep
 import dagster as dg
 import requests
+import random
 
 RECENT_LOG_ENDPOINT_LIMIT = 67
 REQUEST_DELAY_SECONDS = 5
@@ -31,6 +32,11 @@ class HorusResource(dg.ConfigurableResource):
     def get_my_ip(self) -> requests.Response:
         return requests.get("https://ifconfig.me")
 
+    def get_random_sleep():
+        start = 1
+        limit = REQUEST_DELAY_SECONDS
+        return random.randint(start, limit)
+
     def calc_date_interval(self, ano_inicio: int, mes_inicio: int, dia_inicio: int) -> int:
         """
         Calcula a quantidade de dias entre uma data inicial e o dia de hoje (inclusive).
@@ -54,7 +60,7 @@ class HorusResource(dg.ConfigurableResource):
         date_list = []
         current_date = initial
 
-        while current_date <= end.date():
+        while current_date <= end:
             date_list.append(current_date.strftime(date_format))
             current_date += timedelta(days=1)
         return date_list
@@ -70,9 +76,11 @@ class HorusResource(dg.ConfigurableResource):
             response = requests.post(endpoint, headers=headers)
             response.raise_for_status()
             return response.json()[0]
-        except Exception as e:
+        except requests.exceptions.HTTPError as e:
             context.log.error(e)
             context.log.error(self.get_my_ip().text)
+            if e.response.status_code == 403:
+                return [{"status_code": 403, "message": "Forbidden", "codlogacessohistorico": "N/A", "codLogAcesso": "N/A"}]
             return []
 
     @staticmethod
@@ -108,10 +116,6 @@ class HorusResource(dg.ConfigurableResource):
         return self.listar_log_historico(token, data, context)
 
     def iter_logs_since(self, start_date: datetime, context: dg.AssetExecutionContext):
-        """
-        Itera dia a dia os logs de acesso desde `start_date` (formato "%Y/%m/%d") até hoje,
-        produzindo (data, logs) a cada dia processado — em vez de acumular tudo em memória.
-        """
         context.log.info(f"Starting log iteration from {start_date}")
         threshould_date = datetime.now() - timedelta(days=90)
         if start_date > threshould_date.date():
@@ -132,4 +136,5 @@ class HorusResource(dg.ConfigurableResource):
             )
             context.log.info(f"Fetched {len(logs)} logs for {date_item}")
             yield date_item, logs
-            sleep(REQUEST_DELAY_SECONDS)
+            sleep_duration = self.get_random_sleep()
+            sleep(sleep_duration)
