@@ -9,8 +9,10 @@ ansicolors==1.1.8
 antlr4-python3-runtime==4.13.2
 anyio==4.11.0
 asttokens==3.0.0
+asynch==0.4.0
 attrs==25.4.0
 backoff==2.2.1
+backports-zstd==1.7.0
 beautifulsoup4==4.14.2
 black==26.5.1
 bleach==6.3.0
@@ -21,8 +23,12 @@ cachetools==6.2.6
 certifi==2025.10.5
 cffi==2.0.0
 charset-normalizer==3.4.4
+ciso8601==2.3.3
 click==8.3.0
 click-aliases==1.0.5
+clickhouse-connect==1.9.0
+clickhouse-driver==0.2.11
+clickhouse-sqlalchemy==0.3.2
 coloredlogs==14.0
 comm==0.2.3
 cryptography==46.0.3
@@ -114,6 +120,7 @@ psycopg==3.3.2
 psycopg2-binary==2.9.11
 ptyprocess==0.7.0
 pure-eval==0.2.3
+pyalex==0.21
 pyarrow==22.0.0
 pycparser==2.23
 pydantic==2.13.4

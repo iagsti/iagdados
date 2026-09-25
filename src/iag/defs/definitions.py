@@ -1,6 +1,8 @@
 import dagster as dg
 from .resources import IcebergResource
 from .resources import SqlAlchemyResource
+from .resources import ClickhouseResource
+
 
 @dg.definitions
 def resources():
@@ -15,7 +17,10 @@ def resources():
             ),
             "trino_resource": SqlAlchemyResource(
                 connection_string=dg.EnvVar("TRINO_CONNECTION_STRING")
-            )
+            ),
+            "clickhouse_resource": ClickhouseResource(
+                connection_string=dg.EnvVar("CLICKHOUSE_CONNECTION_STRING")
+            ),
         }
     )
 

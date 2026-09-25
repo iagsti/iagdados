@@ -97,7 +97,7 @@ class IcebergResource(dg.ConfigurableResource):
         
         return RestCatalog("lakekeeper", **props)
 
-    def ensure_namespace(self, catalog: RestCatalog, namespace: str) -> None:
+    def ensure_namespace(self, catalog: RestCatalog, namespace: tuple) -> None:
         try:
             catalog.create_namespace(namespace)
         except NamespaceAlreadyExistsError:
@@ -165,11 +165,12 @@ class IcebergResource(dg.ConfigurableResource):
     def _get_or_create_table(
         self,
         catalog: RestCatalog,
-        namespace: str,
+        namespace: str | tuple[str, ...],
         table_name: str,
         arrow_table: pa.Table,
     ):
-        identifier = (namespace, table_name)
+        namespace_tuple = (namespace,) if isinstance(namespace, str) else tuple(namespace)
+        identifier = namespace_tuple + (table_name,)
         try:
             table = catalog.load_table(identifier)
             arrow_table = self._resolve_null_types(arrow_table, table.schema().as_arrow())
@@ -222,7 +223,7 @@ class IcebergResource(dg.ConfigurableResource):
     def append_table(
         self,
         catalog: RestCatalog,
-        namespace: str,
+        namespace: tuple,
         table_name: str,
         df: any,
         from_type: str = "from_pandas",
@@ -271,7 +272,7 @@ class IcebergResource(dg.ConfigurableResource):
     def append(
         self,
         df: any,
-        namespace: str,
+        namespace: tuple,
         table_name: str,
         context: dg.AssetExecutionContext,
         from_type: str,
@@ -285,3 +286,10 @@ class IcebergResource(dg.ConfigurableResource):
         catalog = self.get_catalog(warehouse, context)
         self.ensure_namespace(catalog, namespace)
         self.append_table(catalog, namespace, table_name, df, from_type=from_type, **kwargs)
+
+
+class ClickhouseResource(dg.ConfigurableResource):
+    connection_string: str
+
+    def get_engine(self):
+        return create_engine(self.connection_string)

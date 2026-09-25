@@ -5,8 +5,8 @@ from .resources import HorusResource
 from ..resources import SqlAlchemyResource, IcebergResource
 
 
-DEFAULT_START_DATE = "2023/03/21"
-
+# DEFAULT_START_DATE = "2023/03/21"
+DEFAULT_START_DATE = "2026/09/18"
 
 def _logs_to_dataframe(log_list: list[dict]) -> pd.DataFrame:
     df = pd.DataFrame(log_list)
@@ -17,29 +17,15 @@ def _logs_to_dataframe(log_list: list[dict]) -> pd.DataFrame:
     return df
 
 
-def _last_log_date_to_dataframe(last_log_date: str) -> pd.DataFrame:
-    df = pd.DataFrame([{"data": last_log_date}])
-    return df
-
-def _persist_last_log_date(iceberg_resource: IcebergResource, last_log_date: str, context: dg.AssetExecutionContext) -> None:
-    last_log_date_df = _last_log_date_to_dataframe(last_log_date)
-    iceberg_resource.save(
-        df=last_log_date_df,
-        namespace="horus",
-        table_name="last_log_date",
-        context=context,
-        from_type="from_pandas",
-        **{"preserve_index": False}
-    )
-
 @dg.asset(kinds={"python", "pandas", "trino"})
 def last_log_date(context: dg.AssetExecutionContext, trino_resource: SqlAlchemyResource) -> pd.DataFrame:
     """Extrai a data do último log persistido, se houver."""
     try:
         engine = trino_resource.get_engine()
         query = """
-            SELECT data
-            FROM iceberg.horus.last_log_date
+            SELECT MAX(data)
+            FROM iceberg.horus.log
+            LIMIT 1
         """
         last_log = pd.read_sql(query, con=engine)
         context.log.info(last_log)
@@ -49,33 +35,244 @@ def last_log_date(context: dg.AssetExecutionContext, trino_resource: SqlAlchemyR
         return pd.DataFrame()
 
  
-@dg.asset(kinds={"python", "pandas", "iceberg"})
-def horus_log_historico_persisted(
+@dg.asset(kinds={"python", "pandas"})
+def horus_log_bronze(
     context: dg.AssetExecutionContext,
     horus_resource: HorusResource,
-    iceberg_resource: IcebergResource,
     last_log_date: pd.DataFrame,
-) -> None:
+) -> pd.DataFrame:
     last_date = last_log_date.iat[0, 0] if not last_log_date.empty else DEFAULT_START_DATE
-    start_date = datetime.strptime(last_date, "%Y-%m-%d").date()
-    start_date = start_date + timedelta(days=1)
-    last_log_date = start_date.strftime("%Y/%m/%d")
-    for date_item, log_list in horus_resource.iter_logs_since(start_date=start_date, context=context):
-        last_log_date = date_item
-        if log_list[0].get("status_code") and log_list[0]["status_code"] == 403:
-            _persist_last_log_date(iceberg_resource, last_log_date, context)
-            raise Exception(f"Access forbidden for date {date_item}. Check credentials or permissions.")
-        if not log_list:
-            continue
-        df = _logs_to_dataframe(log_list)
-        iceberg_resource.append(
-            df,
-            namespace="horus",
-            table_name="log",
-            context=context,
-            from_type="from_pandas",
-            **{"preserve_index": False},
-        )
-        context.log.info(f"Persisted {len(df)} logs for {date_item}")
-    _persist_last_log_date(iceberg_resource, last_log_date, context)
+    last_date_datetime = datetime.strptime(last_date, "%Y/%m/%d").date()
+    last_date_datetime = last_date_datetime + timedelta(days=1)
+    logs = horus_resource.iter_logs_since(start_date=last_date_datetime, context=context)
+    logs_df = _logs_to_dataframe(logs)
+    return logs_df
 
+
+@dg.asset(kinds={"pandas", "iceberg"})
+def horus_log_bronze_bucket(
+    context: dg.AssetExecutionContext,
+    iceberg_resource: IcebergResource,
+    horus_log_bronze: pd.DataFrame
+):
+    iceberg_resource.append(
+        df=horus_log_bronze,
+        namespace=("horus",),
+        table_name="log_bronze",
+        context=context,
+        from_type="from_pandas",
+        **{"preserve_index": False}
+    )
+    context.log.info(f"Perssited {horus_log_bronze.count()} logs")
+    return horus_log_bronze
+
+
+@dg.asset()
+def horus_log_bronze_data(trino_resource: SqlAlchemyResource, horus_log_bronze_bucket: pd.DataFrame):
+    query = """
+        SELECT
+            data,
+            hora,
+            ip,
+            numserchi,
+            nroevento,
+            evento,
+            tipopessoa,
+            nomepessoa,
+            codpes,
+            nrodoc,
+            tipodoc,
+            local,
+            nroporta,
+            descricaoporta,
+            devicename,
+            tipocartao,
+            vinculousp,
+            code_log,
+            endpoint
+        FROM iceberg.horus.log_bronze
+    """
+    engine = trino_resource.get_engine()
+    bronze_data_df = pd.read_sql(sql=query, con=engine)
+    return bronze_data_df
+
+
+@dg.asset()
+def horus_log_bronze_deduplicated(horus_log_bronze_data: pd.DataFrame):
+    deduplicated_data_df = horus_log_bronze_data.drop_duplicates(subset=['hora', 'codpes'])
+    return deduplicated_data_df
+
+
+@dg.asset()
+def horus_log_bronze_normalized(horus_log_bronze_deduplicated: pd.DataFrame):
+    normalized_df = horus_log_bronze_deduplicated.copy()
+    normalized_df["nomepessoa"] = normalized_df["nomepessoa"].str.title()
+    return normalized_df
+
+
+@dg.asset()
+def horus_log_silver_bucket(
+    context: dg.AssetExecutionContext,
+    iceberg_resource: IcebergResource,
+    horus_log_bronze_normalized: pd.DataFrame,
+):
+    iceberg_resource.append(
+        df=horus_log_bronze_normalized,
+        namespace=("horus",),
+        table_name="log_silver",
+        context=context,
+        from_type="from_pandas",
+        **{"preserve_index": False}
+    )
+    return horus_log_bronze_normalized
+
+
+@dg.asset(kinds={"trino"})
+def horus_optimized_table(trino_resource: SqlAlchemyResource, horus_log_silver_bucket: pd.DataFrame):
+    query_optimize = """
+        ALTER TABLE iceberg.horus.{level}
+        EXECUTE OPTMIZE (target_file_size => '256MB')
+    """
+
+    query_minifest = """
+        ALTER TABLE iceberg.horus.{level}
+        EXECUTE REWRITE_MANIFESTS;
+    """
+    engine = trino_resource.get_engine()
+    pd.read_sql(sql=query_optimize.format(level="log_bronze"), con=engine)
+    pd.read_sql(sql=query_minifest.format(level="log_bronze"), con=engine)
+    pd.read_sql(sql=query_optimize.format(level="log_silver"), con=engine)
+    pd.read_sql(sql=query_minifest.format(level="log_silver"), con=engine)
+
+
+@dg.asset()
+def horus_gold_aggr_month_week(
+    context: dg.AssetExecutionContext,
+    horus_optimized_table: pd.DataFrame,
+    trino_resource: SqlAlchemyResource,
+    iceberg_resource: IcebergResource
+):
+    query = """
+        WITH dados_formatados AS (
+            SELECT
+                month(date_parse(data, '%Y/%m/%d')) AS mes_num,
+                day_of_week(date_parse(data, '%Y/%m/%d')) AS dia_num
+            FROM iceberg.horus.log_silver
+        )
+        SELECT
+            CASE mes_num
+                WHEN 1 THEN 'Janeiro' WHEN 2 THEN 'Fevereiro' WHEN 3 THEN 'Março'
+                WHEN 4 THEN 'Abril' WHEN 5 THEN 'Maio' WHEN 6 THEN 'Junho'
+                WHEN 7 THEN 'Julho' WHEN 8 THEN 'Agosto' WHEN 9 THEN 'Setembro'
+                WHEN 10 THEN 'Outubro' WHEN 11 THEN 'Novembro' WHEN 12 THEN 'Dezembro'
+            END AS mes,
+            CASE dia_num
+                WHEN 1 THEN 'Segunda' WHEN 2 THEN 'Terça' WHEN 3 THEN 'Quarta'
+                WHEN 4 THEN 'Quinta' WHEN 5 THEN 'Sexta' WHEN 6 THEN 'Sábado' WHEN 7 THEN 'Domingo'
+            END AS dia_semana,
+            COUNT(*) AS total_acessos
+        FROM dados_formatados
+        GROUP BY mes_num, dia_num
+        ORDER BY mes_num, dia_num;
+    """
+    engine = trino_resource.get_engine()
+    df = pd.read_sql(sql=query, con=engine)
+    iceberg_resource.append(
+        df=df,
+        namespace=("horus",),
+        table_name="gold_aggr_month_week",
+        context=context,
+        **{"preserve_index": False}
+    )
+
+
+@dg.asset()
+def horus_gold_aggr_week_hour(
+    context: dg.AssetExecutionContext,
+    horus_optimized_table: pd.DataFrame,
+    trino_resource: SqlAlchemyResource,
+    iceberg_resource: IcebergResource
+):
+    query = """
+        WITH dados_formatados AS (
+            SELECT
+                day_of_week(date_parse(data, '%Y/%m/%d')) AS dia_num,
+                CAST(substr(hora, 1, 2) AS INTEGER) AS hora_num
+            FROM iceberg.horus.log_silver  -- <--- Troque pelo nome real!
+        )
+        SELECT
+            CASE dia_num
+                WHEN 1 THEN 'Segunda'
+                WHEN 2 THEN 'Terça'
+                WHEN 3 THEN 'Quarta'
+                WHEN 4 THEN 'Quinta'
+                WHEN 5 THEN 'Sexta'
+                WHEN 6 THEN 'Sábado'
+                WHEN 7 THEN 'Domingo'
+            END AS dia_semana,
+            hora_num,
+            COUNT(*) AS total_acessos
+        FROM dados_formatados
+        GROUP BY dia_num, hora_num
+        ORDER BY dia_num, hora_num;
+    """
+    engine = trino_resource.get_engine()
+    df = pd.read_sql(sql=query, con=engine)
+    iceberg_resource.append(
+        df=df,
+        namespace=("horus",),
+        table_name="gold_aggr_week_hour",
+        context=context,
+        **{"preserve_index": False}
+    )
+
+
+@dg.asset()
+def horus_gold_aggr_device_access(
+    context: dg.AssetExecutionContext,
+    horus_optimized_table: pd.DataFrame,
+    trino_resource: SqlAlchemyResource,
+    iceberg_resource: IcebergResource
+):
+    query = """
+        SELECT 
+        devicename,
+        COUNT(devicename) acessos
+        FROM iceberg.horus.log_silver
+        GROUP BY devicename
+    """
+    engine = trino_resource.get_engine()
+    df = pd.read_sql(sql=query, con=engine)
+    iceberg_resource.append(
+        df=df,
+        namespace=("horus",),
+        table_name="gold_aggr_device_access",
+        context=context,
+        **{"preserve_index": False}
+    )
+
+
+@dg.asset()
+def horus_gold_aggr_tipo_cartao(
+    context: dg.AssetExecutionContext,
+    horus_optimized_table: pd.DataFrame,
+    trino_resource: SqlAlchemyResource,
+    iceberg_resource: IcebergResource
+):
+    query = """
+        SELECT 
+        tipocartao,
+        COUNT(tipocartao) quantidade
+        FROM iceberg.horus.log_silver
+        WHERE tipocartao IS NOT NULL
+        GROUP BY tipocartao;
+    """
+    engine = trino_resource.get_engine()
+    df = pd.read_sql(sql=query, con=engine)
+    iceberg_resource.append(
+        df=df,
+        namespace=("horus",),
+        table_name="gold_aggr_tipo_cartao",
+        context=context,
+        **{"preserve_index": False}
+    )

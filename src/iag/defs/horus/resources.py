@@ -4,9 +4,8 @@ import dagster as dg
 import requests
 import random
 
-RECENT_LOG_ENDPOINT_LIMIT = 67
-REQUEST_DELAY_SECONDS = 5
-
+LISTAR_LOG_THRESHOLD = 67
+REQUEST_DELAY_SECONDS = 10
 
 class HorusResource(dg.ConfigurableResource):
     base_url: str
@@ -29,15 +28,7 @@ class HorusResource(dg.ConfigurableResource):
         response.raise_for_status()
         return response.json()["token"]
 
-    def get_my_ip(self) -> requests.Response:
-        return requests.get("https://ifconfig.me")
-
-    def get_random_sleep():
-        start = 1
-        limit = REQUEST_DELAY_SECONDS
-        return random.randint(start, limit)
-
-    def calc_date_interval(self, ano_inicio: int, mes_inicio: int, dia_inicio: int) -> int:
+    def calc_date_interval(self, initial_date: datetime) -> int:
         """
         Calcula a quantidade de dias entre uma data inicial e o dia de hoje (inclusive).
 
@@ -46,30 +37,31 @@ class HorusResource(dg.ConfigurableResource):
         :param dia_inicio: Dia da data inicial (ex: 12)
         :return: Número de dias entre a data inicial e hoje, incluindo o dia inicial
         """
-        data_inicial = date(ano_inicio, mes_inicio, dia_inicio)
-        hoje = date.today()
-        return (hoje - data_inicial).days + 1
+        today = date.today()
+        return (today - initial_date).days + 1
 
-    def get_date_list(self, initial_date: datetime, end_date: datetime = None) -> list[str]:
-        date_format = "%Y-%m-%d"
-        initial = initial_date
+    def get_date_list(self, initial_date: datetime, end_date: datetime = None) -> list[datetime.date]:
+        """
+        Retorna uma lista de datas utilizadas para iterar sobre as requisições
+        dos logs.
+        """
         if end_date is None:
-            end = datetime.today().date()
-        else:
-            end = end_date
-        date_list = []
-        current_date = initial
+            end_date = datetime.today().date()
 
-        while current_date <= end:
-            date_list.append(current_date.strftime(date_format))
-            current_date += timedelta(days=1)
+        date_list = []
+        date_item = initial_date
+
+        while date_item <= end_date:
+            date_list.append(date_item)
+            date_item += timedelta(days=1)
         return date_list
 
-    def _request_log(self, token: str, data: str, endpoint: str, context: dg.AssetExecutionContext) -> list[dict]:
+    def _request_log(self, token: str, date: datetime, endpoint: str, context: dg.AssetExecutionContext) -> list[dict]:
+        date_to_str = date.strftime(format="%Y-%m-%d")
         headers = {
             "accept": "*/*",
             "authorization": f"Bearer {token}",
-            "data": data
+            "data": date_to_str
         }
         endpoint = f"{self.base_url}/{endpoint}"
         try:
@@ -78,10 +70,6 @@ class HorusResource(dg.ConfigurableResource):
             return response.json()[0]
         except requests.exceptions.HTTPError as e:
             context.log.error(e)
-            context.log.error(self.get_my_ip().text)
-            if e.response.status_code == 403:
-                return [{"status_code": 403, "message": "Forbidden", "codlogacessohistorico": "N/A", "codLogAcesso": "N/A"}]
-            return []
 
     @staticmethod
     def _normalize_dict_keys(dict_list: list[dict], original_key: str) -> list[dict]:
@@ -95,46 +83,48 @@ class HorusResource(dg.ConfigurableResource):
             item["endpoint"] = endpoint_name
         return logs
 
-    def listar_log_historico(self, token: str, data: str, context: dg.AssetExecutionContext) -> list[dict]:
+    def get_missing_dates_list(self, start_date: datetime):
+        threshould_date = datetime.now() - timedelta(days=90)
+        if start_date > threshould_date.date():
+            return self.get_date_list(initial_date=start_date)
+        return self.get_date_list(initial_date=start_date, end_date=threshould_date.date())
+
+    def listar_log_historico(self, token: str, date: datetime, context: dg.AssetExecutionContext) -> list[dict]:
         context.log.info("Requesting Historico")
-        logs = self._request_log(token, data, "listarLogHistorico", context)
+        logs = self._request_log(token, date, "listarLogHistorico", context)
         logs = self._normalize_dict_keys(logs, original_key="codlogacessohistorico")
         return self._set_endpoint(logs, endpoint_name="historico")
 
-    def listar_log(self, token: str, data: str, context: dg.AssetExecutionContext) -> list[dict]:
+    def listar_log(self, token: str, date: datetime, context: dg.AssetExecutionContext) -> list[dict]:
         context.log.info("Requesting Log")
-        logs = self._request_log(token, data, "listarLog", context)
+        logs = self._request_log(token, date, "listarLog", context)
         logs = self._normalize_dict_keys(logs, original_key="codLogAcesso")
         return self._set_endpoint(logs, endpoint_name="logs")
 
-    def update_logs(
-        self, date_interval: int, limit: int, token: str, data: str, context: dg.AssetExecutionContext
-    ) -> list[dict]:
-        context.log.info(f"Interval: {date_interval}, limit: {limit}")
+    def extract_logs(self, date_interval: int, limit: int):
         if date_interval < limit:
-            return self.listar_log(token, data, context)
-        return self.listar_log_historico(token, data, context)
+            return self.listar_log
+        return self.listar_log_historico   
+
+    def get_a_break(self):
+        start = 1
+        limit = REQUEST_DELAY_SECONDS
+        sleep_duration = random.randint(start, limit)
+        sleep(sleep_duration)
 
     def iter_logs_since(self, start_date: datetime, context: dg.AssetExecutionContext):
         context.log.info(f"Starting log iteration from {start_date}")
-        threshould_date = datetime.now() - timedelta(days=90)
-        if start_date > threshould_date.date():
-            date_list = self.get_date_list(initial_date=start_date)
-        else:
-            date_list = self.get_date_list(initial_date=start_date, end_date=threshould_date)
         token = self.get_token()
-        for date_item in date_list:
-            context.log.info(f"Processing date {date_item}")
-            ano, mes, dia = (int(part) for part in date_item.split("-"))
-            date_interval = self.calc_date_interval(ano_inicio=ano, mes_inicio=mes, dia_inicio=dia)
-            logs = self.update_logs(
-                date_interval=date_interval,
-                limit=RECENT_LOG_ENDPOINT_LIMIT,
-                token=token,
-                data=date_item,
-                context=context,
-            )
-            context.log.info(f"Fetched {len(logs)} logs for {date_item}")
-            yield date_item, logs
-            sleep_duration = self.get_random_sleep()
-            sleep(sleep_duration)
+        date_list = self.get_missing_dates_list(start_date=start_date)
+        logs_list = []
+        try:
+            for date_item in date_list:
+                context.log.info(f"Processing date {date_item}")
+                date_interval = self.calc_date_interval(initial_date=date_item)
+                logs = self.extract_logs(date_interval=date_interval, limit=LISTAR_LOG_THRESHOLD)(token=token, date=date_item, context=context)
+                logs_list.extend(logs)
+                context.log.info(f"Fetched {len(logs)} logs for {date_item}")
+                self.get_a_break()
+            return logs_list
+        except Exception:
+            return logs_list
