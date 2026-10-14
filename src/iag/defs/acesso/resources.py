@@ -31,7 +31,11 @@ class AcessoResource(dg.ConfigurableResource):
 
     def _request(self, method: str, path: str, **kwargs) -> requests.Response:
         response = requests.request(method, f"{self.api_url}{path}", auth=self._auth, **kwargs)
-        response.raise_for_status()
+        if not response.ok:
+            raise requests.HTTPError(
+                f"{response.status_code} {response.reason} for {response.url}: {response.text[:2000]}",
+                response=response,
+            )
         return response
 
     def get_pessoaspos(self) -> pd.DataFrame:

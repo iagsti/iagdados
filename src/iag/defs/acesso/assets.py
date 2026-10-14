@@ -21,6 +21,23 @@ def acesso_alunoposinfo(acesso_relational_db: SqlAlchemyResource) -> pd.DataFram
         responsavel,
         email
     FROM alunospos_info
+    UNION ALL
+    SELECT
+        nome,
+        num_usp,
+        cargo,
+        CASE departamento
+            WHEN 'Astronomia' THEN 'AGA'
+            WHEN 'Geofísica'  THEN 'AGG'
+            WHEN 'Meteorologia' THEN 'ACA'
+            WHEN 'Ciências Atmosféricas' THEN 'ACA'
+        END
+        AS departamento,
+        instituicao,
+        responsavel,
+        email
+    FROM posdocinfo
+    ORDER BY nome
     """
     engine = acesso_relational_db.get_engine()
     with engine.connect() as connection:
@@ -76,8 +93,19 @@ def acesso_pessoasinfo(acesso_relational_db: SqlAlchemyResource) -> pd.DataFrame
             pessoas.nomabvset departamento
         FROM pessoas_info pessoas
         UNION ALL
-        SELECT *
-        FROM posdocinfo
+        SELECT 
+        posdoc.num_usp,
+        posdoc.nome,
+        posdoc.email,
+        posdoc.cargo,
+        CASE posdoc.departamento
+            WHEN 'Astronomia' THEN 'AGA'
+            WHEN 'Geofísica'  THEN 'AGG'
+            WHEN 'Meteorologia' THEN 'ACA'
+            WHEN 'Ciências Atmosféricas' THEN 'ACA'
+        END
+        AS departamento
+        FROM posdocinfo posdoc
         ORDER BY nome
     """
     engine = acesso_relational_db.get_engine()
