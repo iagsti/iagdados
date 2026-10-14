@@ -75,6 +75,10 @@ def acesso_pessoasinfo(acesso_relational_db: SqlAlchemyResource) -> pd.DataFrame
             pessoas.nomabvfnc cargo,
             pessoas.nomabvset departamento
         FROM pessoas_info pessoas
+        UNION ALL
+        SELECT *
+        FROM posdocinfo
+        ORDER BY nome
     """
     engine = acesso_relational_db.get_engine()
     with engine.connect() as connection:

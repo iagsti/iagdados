@@ -8,6 +8,12 @@ from .resources import ClickhouseResource
 def resources():
     return dg.Definitions(
         resources={
+            "replicado_resource": SqlAlchemyResource(
+                connection_string=dg.EnvVar("SQLSERVER_CONNECTION_STRING")
+            ),
+            "relational_resource": SqlAlchemyResource(
+                connection_string=dg.EnvVar("MARIADB_CONNECTION_STRING")
+            ),
             "iceberg_resource": IcebergResource(
                 lakekeeper_url=dg.EnvVar("LAKEKEEPER_ENDPOINT"),
                 aws_endpoint=dg.EnvVar("AWS_S3_ENDPOINT"),
