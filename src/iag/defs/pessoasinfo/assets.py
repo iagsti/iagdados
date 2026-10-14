@@ -8,8 +8,7 @@ from .resources import LocalsApiResource, PessoasResource
 
 def get_pessoa_exceptions():
     pessoas_exceptions = [
-        {"codpes": 1253683, "codema": "paula.coelho@iag.usp.br"},
-        {"codpes": 1253683, "nompes": "Juliana Paula Coelho"}
+        {"codpes": 1253683, "codema": "paula.coelho@iag.usp.br", "nompes": "Juliana Paula Coelho"},
     ]
     pessoas_exceptions = pd.DataFrame(pessoas_exceptions).set_index("codpes")
     return pessoas_exceptions
